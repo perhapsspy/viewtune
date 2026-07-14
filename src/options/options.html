@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ViewTune 설정</title>
+    <link rel="stylesheet" href="../shared/theme.css">
+    <link rel="stylesheet" href="options.css">
+    <script defer src="../shared/constants.js"></script>
+    <script defer src="../shared/shortcut-utils.js"></script>
+    <script defer src="options.js"></script>
+  </head>
+  <body>
+    <main aria-busy="true">
+      <header class="page-header">
+        <p class="wordmark"><span class="vt-brand-mark" aria-hidden="true"></span><span>ViewTune</span></p>
+        <h1>단축키 설정</h1>
+        <p class="lede">글자값이 아닌 물리 키 위치를 저장합니다. 한/영 전환 중에도 같은 위치의 키가 동작해요.</p>
+      </header>
+
+      <section class="card" aria-labelledby="shortcut-heading">
+        <div class="section-heading">
+          <div>
+            <h2 id="shortcut-heading">단축키</h2>
+            <p>일반 키 또는 <strong>Shift + 키</strong>만 사용할 수 있습니다.</p>
+          </div>
+          <button id="restore-defaults" class="text-button" type="button" disabled>기본값 복원</button>
+        </div>
+
+        <div class="shortcut-list">
+          <div class="shortcut-row" data-action="wide">
+            <span>21:9 확대 토글</span>
+            <button type="button" class="shortcut-button" data-record-action="wide" disabled><kbd>—</kbd></button>
+          </div>
+          <div class="shortcut-row" data-action="window">
+            <span>창 맞춤 토글</span>
+            <button type="button" class="shortcut-button" data-record-action="window" disabled><kbd>—</kbd></button>
+          </div>
+          <div class="shortcut-row" data-action="speedDown">
+            <span>속도 0.5× 낮춤</span>
+            <button type="button" class="shortcut-button" data-record-action="speedDown" disabled><kbd>—</kbd></button>
+          </div>
+          <div class="shortcut-row" data-action="speedUp">
+            <span>속도 0.5× 높임</span>
+            <button type="button" class="shortcut-button" data-record-action="speedUp" disabled><kbd>—</kbd></button>
+          </div>
+          <div class="shortcut-row" data-action="speedReset">
+            <span>속도 1× 초기화</span>
+            <button type="button" class="shortcut-button" data-record-action="speedReset" disabled><kbd>—</kbd></button>
+          </div>
+        </div>
+        <p id="recording-note" class="note" aria-live="polite">키 버튼을 선택하면 새 단축키를 입력할 수 있습니다.</p>
+      </section>
+
+      <section class="card feedback-card" aria-labelledby="feedback-heading">
+        <div>
+          <h2 id="feedback-heading">화면 피드백</h2>
+          <p>조작 성공 시 영상 상단에 짧고 작은 안내를 표시합니다.</p>
+        </div>
+        <label class="switch">
+          <input id="show-feedback" type="checkbox" disabled>
+          <span aria-hidden="true"></span>
+          <span class="sr-only">화면 피드백 표시</span>
+        </label>
+      </section>
+    </main>
+  </body>
+</html>

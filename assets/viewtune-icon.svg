@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="ViewTune icon">
+  <rect width="128" height="128" rx="28" fill="#0d0f13"/>
+  <rect x="3" y="3" width="122" height="122" rx="25" fill="none" stroke="#242b36" stroke-width="6"/>
+  <rect x="21" y="33" width="86" height="62" rx="14" fill="#141820" stroke="#86aaff" stroke-width="7"/>
+  <circle cx="88" cy="50" r="5" fill="#a8c1ff"/>
+  <path d="M39 77h12M58 77h12M77 77h12" fill="none" stroke="#737b89" stroke-linecap="round" stroke-width="6"/>
+</svg>

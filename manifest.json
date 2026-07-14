@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "ViewTune — Video Pace & Frame",
+  "version": "0.2.1",
+  "minimum_chrome_version": "114",
+  "description": "웹 비디오의 재생 속도와 화면 비율을 물리 키 단축키로 가볍게 제어합니다.",
+  "permissions": ["storage"],
+  "background": {
+    "service_worker": "src/background/service-worker.js"
+  },
+  "icons": {
+    "16": "assets/icons/icon-16.png",
+    "32": "assets/icons/icon-32.png",
+    "48": "assets/icons/icon-48.png",
+    "128": "assets/icons/icon-128.png"
+  },
+  "action": {
+    "default_title": "ViewTune",
+    "default_icon": {
+      "16": "assets/icons/icon-16.png",
+      "32": "assets/icons/icon-32.png"
+    },
+    "default_popup": "src/popup/popup.html"
+  },
+  "options_page": "src/options/options.html",
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "css": ["src/content/content.css"],
+      "js": [
+        "src/shared/constants.js",
+        "src/shared/shortcut-utils.js",
+        "src/content/video-controller.js",
+        "src/content/shortcut-controller.js",
+        "src/content/main.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_origin_as_fallback": true
+    }
+  ]
+}

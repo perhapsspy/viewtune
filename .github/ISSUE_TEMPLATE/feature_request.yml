@@ -1,0 +1,17 @@
+name: 기능 제안
+description: ViewTune이 해결하면 좋을 사용 사례를 제안해 주세요.
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 해결하려는 문제
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 제안하는 동작
+    validations:
+      required: true

@@ -1,0 +1,31 @@
+name: 버그 신고
+description: 재현 가능한 ViewTune 문제를 알려주세요.
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: input
+    id: site
+    attributes:
+      label: 대상 사이트
+      placeholder: 예) YouTube
+    validations:
+      required: true
+  - type: input
+    id: chrome
+    attributes:
+      label: Chrome 버전
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 재현 방법
+      description: 화면 모드와 누른 키를 순서대로 적어 주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: 기대 결과와 실제 결과
+    validations:
+      required: true

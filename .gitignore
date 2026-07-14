@@ -1,0 +1,18 @@
+.DS_Store
+node_modules/
+*.crx
+*.zip
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+Thumbs.db
+Desktop.ini
+coverage/
+
+# Local project context and release working state
+docs/tasks/
+docs/reference/
+release/packages/
+release/RELEASE_CHECKLIST.md

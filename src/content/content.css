@@ -1,0 +1,77 @@
+[data-viewtune-window-host="window"] {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483646 !important;
+  display: var(--viewtune-window-display, block) !important;
+  box-sizing: border-box !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  border: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  transform: none !important;
+  background: #000 !important;
+}
+
+/* 검증 전 한두 프레임 동안 잘못 확장된 중간 상태를 노출하지 않는다. */
+[data-viewtune-window-host][data-viewtune-window-pending] {
+  visibility: hidden !important;
+}
+
+[data-viewtune-window-host]::backdrop {
+  background: transparent !important;
+  pointer-events: none !important;
+}
+
+[data-viewtune-window-fill],
+[data-viewtune-window-frame] {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+video[data-viewtune-window-video] {
+  box-sizing: border-box !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  object-position: center !important;
+}
+
+/* 사이트별 선택자는 핵심 배치가 아닌 선택적 외형 보정에만 사용한다. */
+[data-viewtune-window-frame] .ytp-chrome-bottom {
+  right: 12px !important;
+  width: auto !important;
+  max-width: none !important;
+}
+
+/* U는 플레이어 박스를 바꾸지 않고 현재 영상 표시 박스만 21:9로 확대한다. */
+video[data-viewtune-wide-crop] {
+  box-sizing: border-box !important;
+  left: 0 !important;
+  top: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: cover !important;
+  object-position: center !important;
+}
+
+video[data-viewtune-wide-crop="surface"] {
+  width: var(--viewtune-crop-width) !important;
+  height: var(--viewtune-crop-height) !important;
+}

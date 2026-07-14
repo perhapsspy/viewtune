@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 보안 취약점 신고
+    url: https://github.com/perhapsspy/viewtune/security/advisories/new
+    about: 민감한 보안 문제는 비공개로 신고해 주세요.
