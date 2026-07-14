@@ -12,7 +12,7 @@ ViewTune — Video Pace & Frame
 
 - 기본 카테고리: 생산성(Productivity)
 - 기본 언어: 한국어
-- 배포 범위: Unlisted
+- 배포 범위: Public
 - 지역: 전체 지역
 
 ## 상세 설명

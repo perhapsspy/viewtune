@@ -1,6 +1,6 @@
 # ViewTune Chrome Web Store 제출 자료
 
-이 디렉터리는 Chrome Web Store 첫 Unlisted 제출에 필요한 로컬 산출물을 관리한다.
+이 디렉터리는 Chrome Web Store 첫 Public 제출에 필요한 로컬 산출물을 관리한다.
 
 - `packages/`: 업로드용 ZIP. `manifest.json`이 ZIP 최상위에 있다.
 - `store-assets/`: 스토어 아이콘·프로모션 이미지·스크린샷.
