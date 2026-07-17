@@ -46,6 +46,7 @@
     }
   },
   "popupReloadFailed": { "message": "탭을 새로고침하지 못했어요." },
+  "settingsTargetMappingAria": { "message": "목표 속도 단축키와 재생 속도" },
   "settingsTargetRateAria": { "message": "목표 재생 속도" },
   "settingsTargetDown": { "message": "목표 속도 낮추기" },
   "settingsTargetUp": { "message": "목표 속도 높이기" },

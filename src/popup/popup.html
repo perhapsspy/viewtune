@@ -73,10 +73,16 @@
 
       <section id="settings-view" class="view settings-view" aria-label="ViewTune 설정" data-i18n-aria-label="popupSettingsAria" aria-busy="true" hidden>
         <div class="settings-toolbar">
-          <div class="target-stepper" role="group" aria-label="목표 재생 속도" data-i18n-aria-label="settingsTargetRateAria">
-            <button type="button" data-setting-action="targetDown" aria-label="목표 속도 낮추기" data-i18n-aria-label="settingsTargetDown" disabled>−</button>
-            <output id="target-playback-rate" aria-live="polite">2×</output>
-            <button type="button" data-setting-action="targetUp" aria-label="목표 속도 높이기" data-i18n-aria-label="settingsTargetUp" disabled>+</button>
+          <div class="target-action-card" role="group" aria-label="목표 속도 단축키와 재생 속도" data-i18n-aria-label="settingsTargetMappingAria">
+            <button type="button" class="target-shortcut-button" data-record-action="speedTarget" disabled>
+              <kbd>—</kbd>
+            </button>
+            <span class="target-map-arrow" aria-hidden="true">→</span>
+            <div class="target-stepper" role="group" aria-label="목표 재생 속도" data-i18n-aria-label="settingsTargetRateAria">
+              <button type="button" data-setting-action="targetDown" aria-label="목표 속도 낮추기" data-i18n-aria-label="settingsTargetDown" disabled>−</button>
+              <output id="target-playback-rate" aria-live="polite">2×</output>
+              <button type="button" data-setting-action="targetUp" aria-label="목표 속도 높이기" data-i18n-aria-label="settingsTargetUp" disabled>+</button>
+            </div>
           </div>
 
           <label class="feedback-toggle">
@@ -99,9 +105,6 @@
           </button>
           <button type="button" class="shortcut-button" data-record-action="window" disabled>
             <span class="shortcut-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2"></rect><path d="M8 9H6v2M16 15h2v-2"></path></svg></span><kbd>—</kbd>
-          </button>
-          <button type="button" class="shortcut-button" data-record-action="speedTarget" disabled>
-            <span class="shortcut-glyph" aria-hidden="true">→2×</span><kbd>—</kbd>
           </button>
           <button type="button" class="shortcut-button" data-record-action="speedDown" disabled>
             <span class="shortcut-glyph" aria-hidden="true">−.5</span><kbd>—</kbd>

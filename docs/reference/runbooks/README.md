@@ -15,5 +15,5 @@
 - 설치 방법과 사용자 기능 설명은 루트 [`README.md`](../../../README.md)가 소유한다.
 - 스토어 입력용 문구와 자산은 [`release/`](../../../release/)가 소유한다.
 - 현재 빌드·단축키·사이트 정책은 `manifest.json`, `src/shared/constants.js`, `src/content/site-policy.js`가 소유한다.
+- Git으로 관리하지 않는 작업 메모·임시 증거·로컬 컨텍스트는 저장소의 `.local/` 아래에만 둔다. `docs/reference/`에는 공유할 현재 기준만 둔다.
 - 실행 결과나 제출 진행 상황은 런북에 체크 표시로 누적하지 않는다. 해당 작업의 커밋, 이슈 또는 릴리스 기록에 남긴다.
-

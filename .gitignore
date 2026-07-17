@@ -11,9 +11,6 @@ Thumbs.db
 Desktop.ini
 coverage/
 
-# Local task context and generated release packages
-docs/tasks/
-docs/reference/*
-!docs/reference/runbooks/
-!docs/reference/runbooks/**
+# Local-only workspace and generated release packages
+.local/
 release/packages/

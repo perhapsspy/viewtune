@@ -46,6 +46,7 @@
     }
   },
   "popupReloadFailed": { "message": "The tab couldn't be reloaded." },
+  "settingsTargetMappingAria": { "message": "Target speed shortcut and playback speed" },
   "settingsTargetRateAria": { "message": "Target playback speed" },
   "settingsTargetDown": { "message": "Decrease target speed" },
   "settingsTargetUp": { "message": "Increase target speed" },

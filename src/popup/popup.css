@@ -15,6 +15,7 @@ body {
 .speed-row,
 .quick-row,
 .settings-toolbar,
+.target-action-card,
 .target-stepper,
 .feedback-control {
   display: flex;
@@ -143,7 +144,7 @@ h1 {
 .rate-button,
 .quick-button,
 .shortcut-button,
-.target-stepper,
+.target-action-card,
 .feedback-toggle,
 .utility-button {
   border: 1px solid var(--vt-color-border);
@@ -280,17 +281,53 @@ h1 {
   gap: 7px;
 }
 
+.target-action-card {
+  min-width: 0;
+  height: 40px;
+  flex: 1;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--vt-radius-md);
+}
+
+.target-shortcut-button {
+  display: grid;
+  width: 38px;
+  height: 32px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: var(--vt-radius-sm);
+  background: transparent;
+  transition: background var(--vt-transition), color var(--vt-transition);
+}
+
+.target-shortcut-button:hover:not(:disabled),
+.target-shortcut-button[data-recording="true"] {
+  background: var(--vt-color-accent-soft);
+  color: var(--vt-color-accent-strong);
+}
+
+.target-shortcut-button[data-recording="true"] kbd {
+  color: var(--vt-color-accent-strong);
+}
+
+.target-map-arrow {
+  color: var(--vt-color-subtle);
+  font-size: 11px;
+}
+
 .target-stepper {
   min-width: 0;
   flex: 1;
   justify-content: space-between;
-  border-radius: var(--vt-radius-md);
+  border-radius: var(--vt-radius-sm);
+  background: transparent;
   overflow: hidden;
 }
 
 .target-stepper button {
-  width: 36px;
-  min-height: 38px;
+  width: 28px;
+  min-height: 32px;
   background: transparent;
   color: var(--vt-color-muted);
   font-size: 17px;
@@ -302,6 +339,7 @@ h1 {
 }
 
 .target-stepper output {
+  min-width: 34px;
   color: var(--vt-color-text);
   font-size: 14px;
   font-variant-numeric: tabular-nums;
@@ -362,7 +400,7 @@ h1 {
 
 .shortcut-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 7px;
   margin-top: 8px;
 }
@@ -373,7 +411,7 @@ h1 {
   grid-template-columns: 1fr;
   place-items: center;
   gap: 5px;
-  padding: 7px 5px;
+  padding: 7px 3px;
   border-radius: var(--vt-radius-md);
 }
 
@@ -461,7 +499,8 @@ h1 {
 
 @media (forced-colors: active) {
   .mode-button[data-active="true"],
-  .shortcut-button[data-recording="true"] {
+  .shortcut-button[data-recording="true"],
+  .target-shortcut-button[data-recording="true"] {
     border-color: Highlight;
     outline: 2px solid Highlight;
     outline-offset: -4px;

@@ -356,13 +356,18 @@ test("통합 설정은 로드 전 입력을 막고 키·목표 속도·피드백
   await flushAsync();
   assert.equal(targetRate.textContent, "2.75×");
 
-  documentListeners.get("click")({ target: shortcutButtons[0] });
+  const targetShortcutButton = shortcutButtons.find(
+    (button) => button.dataset.recordAction === "speedTarget"
+  );
+  documentListeners.get("click")({ target: targetShortcutButton });
   await documentListeners.get("keydown")({
     code: "KeyQ",
     preventDefault() {},
     stopImmediatePropagation() {}
   });
-  assert.equal(shortcutButtons[0].kbd.textContent, "Q");
+  assert.equal(targetShortcutButton.kbd.textContent, "Q");
+  assert.equal(saved.at(-1).targetPlaybackRate, 2.75);
+  assert.equal(saved.at(-1).shortcuts.speedTarget.code, "KeyQ");
 
   feedback.checked = true;
   await feedback.listeners.get("change")();
@@ -370,7 +375,7 @@ test("통합 설정은 로드 전 입력을 막고 키·목표 속도·피드백
 
   await restore.listeners.get("click")();
   assert.equal(targetRate.textContent, "2×");
-  assert.equal(shortcutButtons[0].kbd.textContent, "B");
+  assert.equal(targetShortcutButton.kbd.textContent, "G");
   assert.equal(saved.length, 4);
 });
 
