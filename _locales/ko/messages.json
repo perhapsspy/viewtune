@@ -9,6 +9,7 @@
   "actionSpeedUp": { "message": "속도 0.5× 높임" },
   "actionSpeedReset": { "message": "속도 1× 초기화" },
   "shortcutUnassigned": { "message": "미지정" },
+  "installedVersionAria": { "message": "설치된 ViewTune 버전" },
   "popupTitle": { "message": "ViewTune" },
   "popupOpenSettings": { "message": "ViewTune 설정 열기" },
   "popupCheckingTab": { "message": "현재 탭을 확인하는 중…" },

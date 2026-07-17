@@ -9,6 +9,7 @@
   "actionSpeedUp": { "message": "Speed up 0.5×" },
   "actionSpeedReset": { "message": "Reset speed to 1×" },
   "shortcutUnassigned": { "message": "Unassigned" },
+  "installedVersionAria": { "message": "Installed ViewTune version" },
   "popupTitle": { "message": "ViewTune" },
   "popupOpenSettings": { "message": "Open ViewTune settings" },
   "popupCheckingTab": { "message": "Checking the current tab…" },

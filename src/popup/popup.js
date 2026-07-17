@@ -33,6 +33,7 @@
 
   const elements = {
     controls: document.querySelector("#controls"),
+    installedVersion: document.querySelector("#installed-version"),
     openOptions: document.querySelector("#open-options"),
     rate: document.querySelector("#rate"),
     reloadTab: document.querySelector("#reload-tab"),
@@ -49,10 +50,16 @@
   async function initialize() {
     bindEvents();
     setControlsEnabled(false);
+    renderInstalledVersion();
     renderRuntime();
     await loadSettings();
     renderShortcutLabels();
     await refreshStatus();
+  }
+
+  function renderInstalledVersion() {
+    const version = currentRuntime.manifestVersion || "—";
+    elements.installedVersion.textContent = `v${version}`;
   }
 
   function bindEvents() {

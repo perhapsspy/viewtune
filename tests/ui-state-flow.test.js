@@ -55,6 +55,7 @@ function flushAsync() {
 function createPopupHarness(messageHandler) {
   const runtime = { buildId: "test-build", extensionId: "test-extension", manifestVersion: "1.0.0" };
   const controls = new FakeElement();
+  const installedVersion = new FakeElement();
   const openOptions = new FakeElement();
   const rate = new FakeElement();
   const reloadTab = new FakeElement();
@@ -74,6 +75,7 @@ function createPopupHarness(messageHandler) {
     querySelector(selector) {
       return {
         "#controls": controls,
+        "#installed-version": installedVersion,
         "#open-options": openOptions,
         "#rate": rate,
         "#reload-tab": reloadTab,
@@ -141,8 +143,14 @@ function createPopupHarness(messageHandler) {
   };
 
   vm.runInNewContext(popupSource, context, { filename: "popup.js" });
-  return { documentListeners, runtime, timers, windowButton };
+  return { documentListeners, installedVersion, runtime, timers, windowButton };
 }
+
+test("popup은 manifest 버전을 진단 상태와 무관하게 표시한다", () => {
+  const harness = createPopupHarness((_message, runtime) => currentVideoResult(runtime, false, false));
+
+  assert.equal(harness.installedVersion.textContent, "v1.0.0");
+});
 
 test("V 지연 검증이 원복되면 popup의 활성 상태도 최신 status로 돌아온다", async () => {
   const harness = createPopupHarness((message, runtime) => (
@@ -225,6 +233,7 @@ test("options는 저장 설정을 읽기 전에는 입력을 연결하거나 저
   const main = new FakeElement();
   main.setAttribute("aria-busy", "true");
   const feedback = new FakeElement({ disabled: true });
+  const installedVersion = new FakeElement();
   const note = new FakeElement();
   const restoreDefaults = new FakeElement({ disabled: true });
   const actions = ["wide", "window", "speedTarget", "speedDown", "speedUp", "speedReset"];
@@ -250,6 +259,7 @@ test("options는 저장 설정을 읽기 전에는 입력을 연결하거나 저
       return {
         main,
         "#show-feedback": feedback,
+        "#installed-version": installedVersion,
         "#recording-note": note,
         "#restore-defaults": restoreDefaults,
         "#target-playback-rate": targetRate
@@ -262,6 +272,7 @@ test("options는 저장 설정을 읽기 전에는 입력을 연결하거나 저
 
   const context = {
     chrome: {
+      runtime: {},
       storage: {
         sync: {
           get() { return storedSettings; },
@@ -285,6 +296,7 @@ test("options는 저장 설정을 읽기 전에는 입력을 연결하거나 저
       },
       mergeSettings: (candidate) => candidate || { showFeedback: true, targetPlaybackRate: 2, shortcuts: {} },
       normalizeTargetPlaybackRate: (rate) => rate,
+      runtimeIdentity: () => ({ manifestVersion: "1.0.0" }),
       shortcutFromEvent: () => null,
       shortcutLabel: (shortcut) => shortcut.code,
       shortcutsEqual: () => false,
@@ -295,6 +307,7 @@ test("options는 저장 설정을 읽기 전에는 입력을 연결하거나 저
 
   vm.runInNewContext(optionsSource, context, { filename: "options.js" });
 
+  assert.equal(installedVersion.textContent, "ViewTune v1.0.0");
   documentListeners.get("click")?.({ target: buttons[0] });
   feedback.listeners.get("change")?.();
   assert.equal(saveCount, 0);

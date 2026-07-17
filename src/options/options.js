@@ -9,6 +9,7 @@
     localizeDocument,
     loadSettingsFromStorage,
     normalizeTargetPlaybackRate,
+    runtimeIdentity,
     shortcutFromEvent,
     shortcutLabel,
     shortcutsEqual,
@@ -16,6 +17,7 @@
   } = globalThis.ViewTune;
 
   localizeDocument();
+  const currentRuntime = runtimeIdentity(chrome.runtime);
 
   let settings = defaultSettings();
   let recordingAction = null;
@@ -28,6 +30,7 @@
 
   const elements = {
     feedback: document.querySelector("#show-feedback"),
+    installedVersion: document.querySelector("#installed-version"),
     main: document.querySelector("main"),
     note: document.querySelector("#recording-note"),
     restoreDefaults: document.querySelector("#restore-defaults"),
@@ -38,10 +41,16 @@
   initialize();
 
   async function initialize() {
+    renderInstalledVersion();
     await loadSettings();
     render();
     bindEvents();
     setInteractive(true);
+  }
+
+  function renderInstalledVersion() {
+    const version = currentRuntime.manifestVersion || "—";
+    elements.installedVersion.textContent = `ViewTune v${version}`;
   }
 
   function bindEvents() {

@@ -387,6 +387,15 @@ output {
   display: none;
 }
 
+.installed-version {
+  margin: 10px 3px 0;
+  color: var(--vt-color-subtle);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  text-align: right;
+}
+
 @media (forced-colors: active) {
   .layout-button[data-active="true"] {
     border-color: Highlight;
