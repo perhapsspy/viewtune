@@ -7,6 +7,7 @@ const manifestPath = path.join(projectRoot, "manifest.json");
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
 const packageJson = JSON.parse(await readFile(path.join(projectRoot, "package.json"), "utf8"));
 const constantsSource = await readFile(path.join(projectRoot, "src/shared/constants.js"), "utf8");
+const popupSource = await readFile(path.join(projectRoot, manifest.action.default_popup), "utf8");
 const buildId = constantsSource.match(/const BUILD_ID = "([^"]+)";/)?.[1];
 
 assertEqual(manifest.manifest_version, 3, "Manifest V3여야 합니다.");
@@ -20,7 +21,8 @@ assertTruthy(
 );
 assertTruthy(manifest.action?.default_popup, "팝업 경로가 필요합니다.");
 assertEqual(manifest.default_locale, "en", "기본 확장 언어는 영어여야 합니다.");
-assertTruthy(manifest.options_page, "설정 화면 경로가 필요합니다.");
+assertEqual(manifest.options_page, undefined, "설정은 별도 페이지가 아니라 팝업에 통합되어야 합니다.");
+assertTruthy(popupSource.includes("settings-panel.js"), "팝업 설정 컨트롤러가 필요합니다.");
 assertTruthy(manifest.background?.service_worker, "서비스 워커 경로가 필요합니다.");
 assertTruthy(Array.isArray(manifest.content_scripts) && manifest.content_scripts.length > 0, "content script가 필요합니다.");
 
@@ -30,7 +32,6 @@ assertEqual(contentScript.match_origin_as_fallback, true, "about: 및 blob ifram
 
 const referencedFiles = [
   manifest.action.default_popup,
-  manifest.options_page,
   manifest.background.service_worker,
   ...Object.values(manifest.icons || {}),
   ...Object.values(manifest.action.default_icon || {}),

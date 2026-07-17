@@ -2,12 +2,12 @@
   "use strict";
 
   const {
+    ACTION_LABELS,
     ACTIONS,
     BUILD_ID,
-    STORAGE_KEY,
+    PopupSettingsController,
     defaultSettings,
     localizeDocument,
-    mergeSettings,
     runtimeIdentity,
     runtimeIdentitiesEqual,
     shortcutLabel,
@@ -15,10 +15,6 @@
   } = globalThis.ViewTune;
   localizeDocument();
   const currentRuntime = runtimeIdentity(chrome.runtime);
-  const STEP_ACTION_LABELS = Object.freeze({
-    [ACTIONS.SPEED_DOWN]: t("popupSpeedDownAria", undefined, "재생 속도 0.5배 낮추기"),
-    [ACTIONS.SPEED_UP]: t("popupSpeedUpAria", undefined, "재생 속도 0.5배 높이기")
-  });
   const PENDING_REFRESH_MS = 80;
   const ACTIVE_WINDOW_REFRESH_MS = 500;
 
@@ -27,23 +23,33 @@
     tabId: null,
     busy: false,
     hasVideo: false,
+    settingsVisible: false,
     requestRevision: 0,
     refreshTimer: null
   };
 
   const elements = {
+    controlView: document.querySelector("#control-view"),
     controls: document.querySelector("#controls"),
     installedVersion: document.querySelector("#installed-version"),
-    openOptions: document.querySelector("#open-options"),
+    panel: document.querySelector(".panel"),
     rate: document.querySelector("#rate"),
     reloadTab: document.querySelector("#reload-tab"),
     runtime: document.querySelector("#runtime"),
+    settingsToggle: document.querySelector("#toggle-settings"),
+    settingsView: document.querySelector("#settings-view"),
     status: document.querySelector("#status"),
     targetRateLabel: document.querySelector("#target-rate-label"),
     actionButtons: [...document.querySelectorAll("[data-action]")],
     layoutButtons: [...document.querySelectorAll("[data-mode]")],
     shortcutTargets: [...document.querySelectorAll("[data-shortcut-for]")]
   };
+  const settingsController = new PopupSettingsController({
+    onChange(settings) {
+      state.settings = settings;
+      renderShortcutLabels();
+    }
+  });
 
   initialize();
 
@@ -51,36 +57,47 @@
     bindEvents();
     setControlsEnabled(false);
     renderInstalledVersion();
+    renderView();
     renderRuntime();
-    await loadSettings();
+    state.settings = await settingsController.initialize();
     renderShortcutLabels();
     await refreshStatus();
+  }
+
+  function bindEvents() {
+    document.addEventListener("click", (event) => {
+      const actionButton = event.target.closest?.("[data-action]");
+      if (actionButton) {
+        executeAction(actionButton.dataset.action);
+      }
+    });
+    elements.settingsToggle.addEventListener("click", toggleSettings);
+    elements.reloadTab.addEventListener("click", reloadActiveTab);
+  }
+
+  function toggleSettings() {
+    state.settingsVisible = !state.settingsVisible;
+    if (!state.settingsVisible) {
+      settingsController.cancelRecording();
+    }
+    renderView();
+  }
+
+  function renderView() {
+    elements.panel.dataset.view = state.settingsVisible ? "settings" : "controls";
+    elements.controlView.hidden = state.settingsVisible;
+    elements.settingsView.hidden = !state.settingsVisible;
+    elements.settingsToggle.setAttribute("aria-pressed", String(state.settingsVisible));
+    const label = state.settingsVisible
+      ? t("popupCloseSettings", undefined, "설정 닫기")
+      : t("popupOpenSettings", undefined, "ViewTune 설정 열기");
+    elements.settingsToggle.setAttribute("aria-label", label);
+    elements.settingsToggle.title = label;
   }
 
   function renderInstalledVersion() {
     const version = currentRuntime.manifestVersion || "—";
     elements.installedVersion.textContent = `v${version}`;
-  }
-
-  function bindEvents() {
-    document.addEventListener("click", (event) => {
-      const actionButton = event.target.closest("[data-action]");
-      if (actionButton) {
-        executeAction(actionButton.dataset.action);
-      }
-    });
-
-    elements.openOptions.addEventListener("click", () => chrome.runtime.openOptionsPage());
-    elements.reloadTab.addEventListener("click", reloadActiveTab);
-  }
-
-  async function loadSettings() {
-    try {
-      const stored = await chrome.storage.sync.get(STORAGE_KEY);
-      state.settings = mergeSettings(stored[STORAGE_KEY]);
-    } catch {
-      state.settings = defaultSettings();
-    }
   }
 
   async function refreshStatus(requestRevision = beginRequest()) {
@@ -131,11 +148,7 @@
       scheduleStatusRefresh(result, requestRevision);
     } catch {
       if (isCurrentRequest(requestRevision)) {
-        renderDisconnected(t(
-          "popupCommandFailed",
-          undefined,
-          "명령을 전달하지 못했어요. 페이지를 새로고침해 보세요."
-        ));
+        renderDisconnected(t("popupCommandFailed", undefined, "명령을 전달하지 못했어요."));
       }
     } finally {
       if (isCurrentRequest(requestRevision)) {
@@ -154,7 +167,6 @@
       renderDisconnected(result.message);
       return;
     }
-
     if (!isCurrentRuntime(result?.runtime)) {
       renderStaleRuntime(result?.runtime);
       return;
@@ -162,11 +174,19 @@
 
     renderRuntime(result.runtime);
     elements.reloadTab.hidden = true;
+    if (result?.supported === false) {
+      renderDisconnected(result.message || t(
+        "popupSiteUnavailable",
+        undefined,
+        "이 사이트에서는 조작을 사용할 수 없어요."
+      ), "quiet");
+      return;
+    }
     if (!result?.found) {
       renderDisconnected(result?.message || t(
         "popupNoVideo",
         undefined,
-        "현재 탭에서 제어할 영상을 찾지 못했어요."
+        "제어할 영상을 찾지 못했어요."
       ));
       return;
     }
@@ -175,21 +195,17 @@
     state.hasVideo = true;
     elements.status.textContent = actionFailed
       ? result.message
-      : t("popupConnected", undefined, "현재 영상에 연결됨");
-    if (actionFailed) {
-      delete elements.status.dataset.connected;
-    } else {
-      elements.status.dataset.connected = "true";
-    }
+      : t("popupConnected", undefined, "Ready");
+    elements.status.dataset.tone = actionFailed ? "neutral" : "ready";
     elements.rate.textContent = `${formatRate(result.rate)}×`;
     setControlsEnabled(true);
     renderModes(result.modes);
   }
 
-  function renderDisconnected(message) {
+  function renderDisconnected(message, tone = "neutral") {
     state.hasVideo = false;
     elements.status.textContent = message;
-    delete elements.status.dataset.connected;
+    elements.status.dataset.tone = tone;
     elements.rate.textContent = "—";
     elements.reloadTab.hidden = true;
     renderRuntime();
@@ -214,41 +230,29 @@
     for (const target of elements.shortcutTargets) {
       target.textContent = shortcutLabel(state.settings.shortcuts[target.dataset.shortcutFor]);
     }
-    for (const [action, label] of Object.entries(STEP_ACTION_LABELS)) {
-      const button = elements.actionButtons.find((candidate) => candidate.dataset.action === action);
-      button?.setAttribute(
-        "aria-label",
-        t(
-          "popupActionShortcutAria",
-          [label, shortcutLabel(state.settings.shortcuts[action])],
-          `${label}, 단축키 ${shortcutLabel(state.settings.shortcuts[action])}`
-        )
-      );
-    }
+
     const targetRate = formatRate(state.settings.targetPlaybackRate);
-    elements.targetRateLabel.textContent = t(
-      "popupApplyTargetRate",
-      [targetRate],
-      `${targetRate}× 바로 적용`
-    );
-    const targetButton = elements.actionButtons.find(
-      (candidate) => candidate.dataset.action === ACTIONS.SPEED_TARGET
-    );
-    targetButton?.setAttribute("aria-label", t(
-      "popupApplyTargetRateAria",
-      [targetRate, shortcutLabel(state.settings.shortcuts[ACTIONS.SPEED_TARGET])],
-      `목표 속도 ${targetRate}배 적용, 단축키 ${shortcutLabel(state.settings.shortcuts[ACTIONS.SPEED_TARGET])}`
-    ));
+    elements.targetRateLabel.textContent = `${targetRate}×`;
+    for (const button of elements.actionButtons) {
+      const action = button.dataset.action;
+      const shortcut = shortcutLabel(state.settings.shortcuts[action]);
+      const actionLabel = action === ACTIONS.SPEED_TARGET
+        ? t("popupTargetAction", [targetRate], `목표 속도 ${targetRate}×`)
+        : ACTION_LABELS[action];
+      const label = t(
+        "popupActionShortcutAria",
+        [actionLabel, shortcut],
+        `${actionLabel}, 단축키 ${shortcut}`
+      );
+      button.setAttribute("aria-label", label);
+      button.title = label;
+    }
   }
 
   function renderStaleRuntime(pageRuntime) {
     state.hasVideo = false;
-    elements.status.textContent = t(
-      "popupUpdateRequired",
-      undefined,
-      "업데이트 적용 필요 — 이 탭은 이전 ViewTune 코드입니다."
-    );
-    delete elements.status.dataset.connected;
+    elements.status.textContent = t("popupUpdateRequired", undefined, "업데이트 적용 필요");
+    elements.status.dataset.tone = "neutral";
     elements.rate.textContent = "—";
     elements.reloadTab.hidden = false;
     renderRuntime(pageRuntime);
@@ -314,7 +318,6 @@
     if (delay === null) {
       return;
     }
-
     clearTimeout(state.refreshTimer);
     state.refreshTimer = window.setTimeout(() => {
       state.refreshTimer = null;
@@ -344,7 +347,7 @@
       window.close();
     } catch {
       elements.reloadTab.disabled = false;
-      elements.status.textContent = t("popupReloadFailed", undefined, "탭을 새로고침하지 못했어요.");
+      elements.status.textContent = t("popupReloadFailed", undefined, "새로고침하지 못했어요.");
     }
   }
 
@@ -352,6 +355,8 @@
     if (!Number.isFinite(rate)) {
       return "—";
     }
-    return Number.isInteger(rate) ? String(rate) : rate.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+    return Number.isInteger(rate)
+      ? String(rate)
+      : rate.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
   }
 })();

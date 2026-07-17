@@ -63,7 +63,7 @@
 
   const STORAGE_KEY = "viewTuneSettings";
 
-  const BUILD_ID = "0.3.0-20260716-compat-i18n-v1";
+  const BUILD_ID = "0.3.0-20260717-compact-popup-v2";
   const MIN_PLAYBACK_RATE = 0.5;
   const MAX_PLAYBACK_RATE = 4;
   const DEFAULT_TARGET_PLAYBACK_RATE = 2;

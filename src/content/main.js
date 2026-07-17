@@ -1,8 +1,16 @@
 (() => {
   "use strict";
 
-  const { BUILD_ID, runtimeIdentity } = globalThis.ViewTune;
-  const controller = new globalThis.ViewTune.VideoController();
+  const {
+    BUILD_ID,
+    pageCapability,
+    runtimeIdentity,
+    unsupportedPageResult
+  } = globalThis.ViewTune;
+  const capability = pageCapability(document.location);
+  const controller = capability.supported
+    ? new globalThis.ViewTune.VideoController()
+    : null;
   markRuntimeBuild();
   const markFrameActive = () => {
     chrome.runtime.sendMessage({ type: "viewtune/activate-frame" }).catch(() => {
@@ -10,38 +18,49 @@
     });
   };
 
-  const shortcuts = new globalThis.ViewTune.ShortcutController(controller, markFrameActive);
-  shortcuts.start();
+  if (controller) {
+    const shortcuts = new globalThis.ViewTune.ShortcutController(controller, markFrameActive);
+    shortcuts.start();
 
-  document.addEventListener("pointerdown", (event) => {
-    if (controller.videoFromElement(event.target)) {
-      markFrameActive();
-    }
-  }, true);
+    document.addEventListener("pointerdown", (event) => {
+      if (controller.videoFromElement(event.target)) {
+        markFrameActive();
+      }
+    }, true);
 
-  document.addEventListener("play", (event) => {
-    if (controller.isUsableVideo(event.target)) {
-      markFrameActive();
-    }
-  }, true);
+    document.addEventListener("play", (event) => {
+      if (controller.isUsableVideo(event.target)) {
+        markFrameActive();
+      }
+    }, true);
+  }
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type === "viewtune/execute") {
-      const result = controller.execute(message.action);
+      const result = controller
+        ? controller.execute(message.action)
+        : unsupportedPageResult(capability);
       if (result.found) {
         markFrameActive();
       }
-      sendResponse(withRuntime(result));
+      sendResponse(withPageContext(result));
       return;
     }
 
     if (message?.type === "viewtune/status") {
-      sendResponse(withRuntime(controller.getStatus()));
+      const result = controller
+        ? controller.getStatus()
+        : unsupportedPageResult(capability);
+      sendResponse(withPageContext(result));
     }
   });
 
-  function withRuntime(result) {
-    return { ...result, runtime: runtimeIdentity(chrome.runtime) };
+  function withPageContext(result) {
+    return {
+      ...result,
+      supported: capability.supported,
+      runtime: runtimeIdentity(chrome.runtime)
+    };
   }
 
   function markRuntimeBuild() {

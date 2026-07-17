@@ -136,7 +136,6 @@
       this.stateObserver = null;
       this.windowLayoutValidationToken = null;
       this.targetPlaybackRate = DEFAULT_TARGET_PLAYBACK_RATE;
-      this.pendingRateResumes = new WeakMap();
 
       this.trackVideoInteractions();
     }
@@ -334,18 +333,14 @@
         return this.noVideoResult();
       }
 
-      const requestedRate = this.clampRate(video.playbackRate + delta);
-      const nextRate = this.rateSupportedByPage(requestedRate);
+      const nextRate = this.clampRate(video.playbackRate + delta);
       this.applyPlaybackRate(video, nextRate);
       this.rememberInteraction(video);
       const formattedRate = this.formatRate(nextRate);
-      const siteLimited = nextRate !== requestedRate;
       const isAtLimit = nextRate === MIN_PLAYBACK_RATE || nextRate === MAX_PLAYBACK_RATE;
-      this.showToast(siteLimited
-        ? t("contentSpeedSiteLimit", [formattedRate], `속도 ${formattedRate}× (사이트 한계)`)
-        : isAtLimit
-          ? t("contentSpeedLimit", [formattedRate], `속도 ${formattedRate}× (한계)`)
-          : t("contentSpeed", [formattedRate], `속도 ${formattedRate}×`));
+      this.showToast(isAtLimit
+        ? t("contentSpeedLimit", [formattedRate], `속도 ${formattedRate}× (한계)`)
+        : t("contentSpeed", [formattedRate], `속도 ${formattedRate}×`));
       return this.resultFor(video, { ok: true });
     }
 
@@ -355,14 +350,11 @@
         return this.noVideoResult();
       }
 
-      const requestedRate = this.clampRate(rate);
-      const nextRate = this.rateSupportedByPage(requestedRate);
+      const nextRate = this.clampRate(rate);
       this.applyPlaybackRate(video, nextRate);
       this.rememberInteraction(video);
       const formattedRate = this.formatRate(nextRate);
-      this.showToast(nextRate === requestedRate
-        ? t("contentSpeed", [formattedRate], `속도 ${formattedRate}×`)
-        : t("contentSpeedSiteLimit", [formattedRate], `속도 ${formattedRate}× (사이트 한계)`));
+      this.showToast(t("contentSpeed", [formattedRate], `속도 ${formattedRate}×`));
       return this.resultFor(video, { ok: true });
     }
 
@@ -370,61 +362,7 @@
       if (video.playbackRate === rate) {
         return;
       }
-
-      const previousResume = this.pendingRateResumes.get(video);
-      const shouldResume = this.requiresPausedRateChange()
-        && (previousResume?.shouldResume || (!video.paused && !video.ended));
-      if (shouldResume && typeof video.pause === "function") {
-        video.pause();
-      }
       video.playbackRate = rate;
-      if (!shouldResume || typeof video.play !== "function") {
-        this.pendingRateResumes.delete(video);
-        return;
-      }
-
-      const resumeToken = { shouldResume: true };
-      this.pendingRateResumes.set(video, resumeToken);
-      const resume = () => {
-        if (this.pendingRateResumes.get(video) !== resumeToken) {
-          return;
-        }
-        if (!video.isConnected || video.ended) {
-          this.pendingRateResumes.delete(video);
-          return;
-        }
-        this.pendingRateResumes.delete(video);
-        try {
-          const playResult = video.play();
-          playResult?.catch?.(() => {});
-        } catch {
-          // 사이트가 재생 재개를 거절하면 사용자의 다음 재생 입력에 맡긴다.
-        }
-      };
-      if (typeof this.window.requestAnimationFrame === "function") {
-        this.window.requestAnimationFrame(resume);
-      } else if (typeof this.window.setTimeout === "function") {
-        this.window.setTimeout?.(resume, 0);
-      } else {
-        resume();
-      }
-    }
-
-    rateSupportedByPage(rate) {
-      return this.isNetflixPage() ? Math.min(1.5, rate) : rate;
-    }
-
-    requiresPausedRateChange() {
-      return this.isNetflixPage();
-    }
-
-    isNetflixPage() {
-      try {
-        const hostname = String(this.document.location?.hostname || "").toLowerCase();
-        return hostname === "netflix.com" || hostname.endsWith(".netflix.com");
-      } catch {
-        return false;
-      }
     }
 
     toggleWindowLayout() {

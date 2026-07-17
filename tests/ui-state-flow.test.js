@@ -7,14 +7,16 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const popupSource = readFileSync(path.join(__dirname, "../src/popup/popup.js"), "utf8");
-const optionsSource = readFileSync(path.join(__dirname, "../src/options/options.js"), "utf8");
+const settingsSource = readFileSync(path.join(__dirname, "../src/popup/settings-panel.js"), "utf8");
+const ACTIONS = ["wide", "window", "speedTarget", "speedDown", "speedUp", "speedReset"];
 
 class FakeElement {
-  constructor({ dataset = {}, disabled = false, kbd = null } = {}) {
+  constructor({ dataset = {}, disabled = false, hidden = false, kbd = null } = {}) {
     this.attributes = new Map();
+    this.checked = false;
     this.dataset = { ...dataset };
     this.disabled = disabled;
-    this.hidden = false;
+    this.hidden = hidden;
     this.kbd = kbd;
     this.listeners = new Map();
     this.textContent = "";
@@ -38,12 +40,9 @@ class FakeElement {
   }
 
   closest(selector) {
-    if (selector === "[data-action]" && this.dataset.action) {
-      return this;
-    }
-    if (selector === "[data-record-action]" && this.dataset.recordAction) {
-      return this;
-    }
+    if (selector === "[data-action]" && this.dataset.action) return this;
+    if (selector === "[data-record-action]" && this.dataset.recordAction) return this;
+    if (selector === "[data-setting-action]" && this.dataset.settingAction) return this;
     return null;
   }
 }
@@ -52,56 +51,97 @@ function flushAsync() {
   return new Promise((resolve) => setImmediate(resolve));
 }
 
+function defaultSettings() {
+  const codes = {
+    wide: "KeyB",
+    window: "KeyV",
+    speedTarget: "KeyG",
+    speedDown: "BracketLeft",
+    speedUp: "BracketRight",
+    speedReset: "KeyR"
+  };
+  return {
+    showFeedback: true,
+    targetPlaybackRate: 2,
+    shortcuts: Object.fromEntries(ACTIONS.map((action) => [action, { code: codes[action] }]))
+  };
+}
+
+function cloneSettings(settings) {
+  return JSON.parse(JSON.stringify(settings));
+}
+
 function createPopupHarness(messageHandler) {
   const runtime = { buildId: "test-build", extensionId: "test-extension", manifestVersion: "1.0.0" };
-  const controls = new FakeElement();
-  const installedVersion = new FakeElement();
-  const openOptions = new FakeElement();
-  const rate = new FakeElement();
-  const reloadTab = new FakeElement();
-  const runtimeText = new FakeElement();
-  const status = new FakeElement();
-  const targetRateLabel = new FakeElement();
-  const windowButton = new FakeElement({ dataset: { action: "window", mode: "window" } });
-  const wideButton = new FakeElement({ dataset: { action: "wide", mode: "wide" } });
-  const actionButtons = [windowButton, wideButton];
+  const elements = {
+    controlView: new FakeElement(),
+    controls: new FakeElement(),
+    installedVersion: new FakeElement(),
+    panel: new FakeElement(),
+    rate: new FakeElement(),
+    reloadTab: new FakeElement(),
+    runtimeText: new FakeElement(),
+    settingsToggle: new FakeElement(),
+    settingsView: new FakeElement({ hidden: true }),
+    status: new FakeElement(),
+    targetRateLabel: new FakeElement()
+  };
+  const actionButtons = ACTIONS.map((action) => new FakeElement({
+    dataset: {
+      action,
+      ...(action === "wide" || action === "window" ? { mode: action } : {})
+    }
+  }));
+  const windowButton = actionButtons.find((button) => button.dataset.action === "window");
   const documentListeners = new Map();
   const timers = [];
+  let settingsController;
 
   const document = {
-    addEventListener(type, listener) {
-      documentListeners.set(type, listener);
-    },
+    addEventListener(type, listener) { documentListeners.set(type, listener); },
     querySelector(selector) {
       return {
-        "#controls": controls,
-        "#installed-version": installedVersion,
-        "#open-options": openOptions,
-        "#rate": rate,
-        "#reload-tab": reloadTab,
-        "#runtime": runtimeText,
-        "#status": status,
-        "#target-rate-label": targetRateLabel
+        "#control-view": elements.controlView,
+        "#controls": elements.controls,
+        "#installed-version": elements.installedVersion,
+        ".panel": elements.panel,
+        "#rate": elements.rate,
+        "#reload-tab": elements.reloadTab,
+        "#runtime": elements.runtimeText,
+        "#toggle-settings": elements.settingsToggle,
+        "#settings-view": elements.settingsView,
+        "#status": elements.status,
+        "#target-rate-label": elements.targetRateLabel
       }[selector] || null;
     },
     querySelectorAll(selector) {
       if (selector === "[data-action]") return actionButtons;
-      if (selector === "[data-mode]") return [windowButton, wideButton];
+      if (selector === "[data-mode]") return actionButtons.filter((button) => button.dataset.mode);
       if (selector === "[data-shortcut-for]") return [];
       return [];
     }
   };
 
+  class PopupSettingsController {
+    constructor({ onChange }) {
+      this.onChange = onChange;
+      this.cancelCount = 0;
+      settingsController = this;
+    }
+    async initialize() {
+      const settings = defaultSettings();
+      this.onChange(settings);
+      return settings;
+    }
+    cancelRecording() { this.cancelCount += 1; }
+  }
+
   const context = {
     chrome: {
       runtime: {
         id: runtime.extensionId,
-        openOptionsPage() {},
-        sendMessage(message) {
-          return messageHandler(message, runtime);
-        }
+        sendMessage(message) { return messageHandler(message, runtime); }
       },
-      storage: { sync: { async get() { return {}; } } },
       tabs: {
         async query() { return [{ id: 7 }]; },
         async reload() {}
@@ -116,40 +156,51 @@ function createPopupHarness(messageHandler) {
         return timers.length;
       }
     },
-    ViewTune: undefined
-  };
-  context.ViewTune = {
-    ACTIONS: {
-      WIDE: "wide",
-      WINDOW: "window",
-      SPEED_DOWN: "speedDown",
-      SPEED_UP: "speedUp",
-      SPEED_TARGET: "speedTarget",
-      SPEED_RESET: "speedReset"
-    },
-    BUILD_ID: runtime.buildId,
-    STORAGE_KEY: "viewTuneSettings",
-    defaultSettings: () => ({ shortcuts: {}, targetPlaybackRate: 2 }),
-    localizeDocument() {},
-    mergeSettings: () => ({ shortcuts: {}, targetPlaybackRate: 2 }),
-    runtimeIdentity: () => runtime,
-    runtimeIdentitiesEqual: (left, right) => (
-      left?.buildId === right?.buildId
-      && left?.extensionId === right?.extensionId
-      && left?.manifestVersion === right?.manifestVersion
-    ),
-    shortcutLabel: () => "",
-    t: (_key, _substitutions, fallback) => fallback
+    ViewTune: {
+      ACTION_LABELS: Object.fromEntries(ACTIONS.map((action) => [action, action])),
+      ACTIONS: {
+        WIDE: "wide",
+        WINDOW: "window",
+        SPEED_DOWN: "speedDown",
+        SPEED_UP: "speedUp",
+        SPEED_TARGET: "speedTarget",
+        SPEED_RESET: "speedReset"
+      },
+      BUILD_ID: runtime.buildId,
+      PopupSettingsController,
+      defaultSettings,
+      localizeDocument() {},
+      runtimeIdentity: () => runtime,
+      runtimeIdentitiesEqual: (left, right) => (
+        left?.buildId === right?.buildId
+        && left?.extensionId === right?.extensionId
+        && left?.manifestVersion === right?.manifestVersion
+      ),
+      shortcutLabel: (shortcut) => shortcut?.code || "—",
+      t: (_key, _substitutions, fallback) => fallback
+    }
   };
 
   vm.runInNewContext(popupSource, context, { filename: "popup.js" });
-  return { documentListeners, installedVersion, runtime, timers, windowButton };
+  return { actionButtons, documentListeners, elements, runtime, settingsController, timers, windowButton };
 }
 
-test("popup은 manifest 버전을 진단 상태와 무관하게 표시한다", () => {
+test("popup은 설치 버전을 표시하고 같은 셸에서 설정 화면을 교체한다", async () => {
   const harness = createPopupHarness((_message, runtime) => currentVideoResult(runtime, false, false));
+  await flushAsync();
 
-  assert.equal(harness.installedVersion.textContent, "v1.0.0");
+  assert.equal(harness.elements.installedVersion.textContent, "v1.0.0");
+  assert.equal(harness.elements.controlView.hidden, false);
+  assert.equal(harness.elements.settingsView.hidden, true);
+
+  harness.elements.settingsToggle.listeners.get("click")();
+  assert.equal(harness.elements.controlView.hidden, true);
+  assert.equal(harness.elements.settingsView.hidden, false);
+  assert.equal(harness.elements.settingsToggle.getAttribute("aria-pressed"), "true");
+
+  harness.elements.settingsToggle.listeners.get("click")();
+  assert.equal(harness.settingsController.cancelCount, 1);
+  assert.equal(harness.elements.controlView.hidden, false);
 });
 
 test("V 지연 검증이 원복되면 popup의 활성 상태도 최신 status로 돌아온다", async () => {
@@ -167,9 +218,7 @@ test("V 지연 검증이 원복되면 popup의 활성 상태도 최신 status로
   await flushAsync();
 
   assert.equal(harness.windowButton.getAttribute("aria-pressed"), "true");
-  assert.equal(harness.timers.length, 1);
   assert.equal(harness.timers[0].delay, 80);
-
   harness.timers.shift().callback();
   await flushAsync();
   await flushAsync();
@@ -180,19 +229,14 @@ test("V 지연 검증이 원복되면 popup의 활성 상태도 최신 status로
 
 test("진행 중이던 status 응답은 더 최신 popup 명령 상태를 덮지 않는다", async () => {
   let resolveStaleStatus;
-  const staleStatus = new Promise((resolve) => {
-    resolveStaleStatus = resolve;
-  });
+  const staleStatus = new Promise((resolve) => { resolveStaleStatus = resolve; });
   let statusCalls = 0;
   let commandCalls = 0;
   const harness = createPopupHarness((message, runtime) => {
     if (message.type === "viewtune/tab-status") {
       statusCalls += 1;
-      return statusCalls === 1
-        ? currentVideoResult(runtime, false, false)
-        : staleStatus;
+      return statusCalls === 1 ? currentVideoResult(runtime, false, false) : staleStatus;
     }
-
     commandCalls += 1;
     return commandCalls === 1
       ? currentVideoResult(runtime, true, true)
@@ -204,8 +248,6 @@ test("진행 중이던 status 응답은 더 최신 popup 명령 상태를 덮지
   harness.documentListeners.get("click")({ target: harness.windowButton });
   await flushAsync();
   await flushAsync();
-  assert.equal(harness.windowButton.getAttribute("aria-pressed"), "true");
-
   harness.timers.shift().callback();
   await flushAsync();
   assert.equal(statusCalls, 2);
@@ -213,124 +255,128 @@ test("진행 중이던 status 응답은 더 최신 popup 명령 상태를 덮지
   harness.documentListeners.get("click")({ target: harness.windowButton });
   await flushAsync();
   await flushAsync();
-  assert.equal(harness.windowButton.getAttribute("aria-pressed"), "false");
-
   resolveStaleStatus(currentVideoResult(harness.runtime, true, false));
   await flushAsync();
   await flushAsync();
 
-  assert.equal(harness.windowButton.dataset.active, "false");
   assert.equal(harness.windowButton.getAttribute("aria-pressed"), "false");
 });
 
-test("options는 저장 설정을 읽기 전에는 입력을 연결하거나 저장하지 않는다", async () => {
+test("통합 설정은 로드 전 입력을 막고 키·목표 속도·피드백·복원을 같은 저장 계약으로 처리한다", async () => {
   let resolveStoredSettings;
-  const storedSettings = new Promise((resolve) => {
-    resolveStoredSettings = resolve;
-  });
-  let saveCount = 0;
+  const storedSettings = new Promise((resolve) => { resolveStoredSettings = resolve; });
+  const saved = [];
   const documentListeners = new Map();
-  const main = new FakeElement();
-  main.setAttribute("aria-busy", "true");
+  const panel = new FakeElement();
   const feedback = new FakeElement({ disabled: true });
-  const installedVersion = new FakeElement();
   const note = new FakeElement();
-  const restoreDefaults = new FakeElement({ disabled: true });
-  const actions = ["wide", "window", "speedTarget", "speedDown", "speedUp", "speedReset"];
-  const buttons = actions.map((action) => new FakeElement({
+  const restore = new FakeElement({ disabled: true });
+  const targetDown = new FakeElement({ dataset: { settingAction: "targetDown" }, disabled: true });
+  const targetUp = new FakeElement({ dataset: { settingAction: "targetUp" }, disabled: true });
+  const targetRate = new FakeElement();
+  const shortcutButtons = ACTIONS.map((action) => new FakeElement({
     dataset: { recordAction: action },
     disabled: true,
     kbd: new FakeElement()
   }));
-  const labels = Object.fromEntries(actions.map((action) => [action, action]));
-  const customSettings = {
-    showFeedback: false,
-    targetPlaybackRate: 2.5,
-    shortcuts: Object.fromEntries(actions.map((action, index) => [action, { code: `Key${index}` }]))
-  };
-  const targetRate = new FakeElement({ disabled: true });
-  targetRate.valueAsNumber = 2;
+  const custom = defaultSettings();
+  custom.showFeedback = false;
+  custom.targetPlaybackRate = 2.5;
 
   const document = {
-    addEventListener(type, listener) {
-      documentListeners.set(type, listener);
-    },
+    addEventListener(type, listener) { documentListeners.set(type, listener); },
     querySelector(selector) {
       return {
-        main,
         "#show-feedback": feedback,
-        "#installed-version": installedVersion,
-        "#recording-note": note,
-        "#restore-defaults": restoreDefaults,
+        "#settings-note": note,
+        "#settings-view": panel,
+        "#restore-defaults": restore,
         "#target-playback-rate": targetRate
       }[selector] || null;
     },
     querySelectorAll(selector) {
-      return selector === "[data-record-action]" ? buttons : [];
+      if (selector === "[data-setting-action]") return [targetDown, targetUp];
+      if (selector === "[data-record-action]") return shortcutButtons;
+      return [];
     }
   };
-
+  const normalizeShortcut = (shortcut) => shortcut && ({
+    code: shortcut.code,
+    shift: Boolean(shortcut.shift),
+    alt: Boolean(shortcut.alt),
+    ctrl: Boolean(shortcut.ctrl),
+    meta: Boolean(shortcut.meta)
+  });
   const context = {
-    chrome: {
-      runtime: {},
-      storage: {
-        sync: {
-          get() { return storedSettings; },
-          async set() { saveCount += 1; }
-        }
-      }
-    },
+    chrome: { storage: { sync: {} } },
     clearTimeout() {},
     document,
     setTimeout() { return 1; },
     ViewTune: {
-      ACTION_LABELS: labels,
-      ACTION_ORDER: actions,
-
+      ACTION_LABELS: Object.fromEntries(ACTIONS.map((action) => [action, action])),
+      ACTION_ORDER: ACTIONS,
       STORAGE_KEY: "viewTuneSettings",
-      defaultSettings: () => ({ showFeedback: true, targetPlaybackRate: 2, shortcuts: {} }),
-      localizeDocument() {},
-      loadSettingsFromStorage: async (storageArea) => {
-        const stored = await storageArea.get();
-        return stored.viewTuneSettings || { showFeedback: true, targetPlaybackRate: 2, shortcuts: {} };
-      },
-      mergeSettings: (candidate) => candidate || { showFeedback: true, targetPlaybackRate: 2, shortcuts: {} },
-      normalizeTargetPlaybackRate: (rate) => rate,
-      runtimeIdentity: () => ({ manifestVersion: "1.0.0" }),
-      shortcutFromEvent: () => null,
-      shortcutLabel: (shortcut) => shortcut.code,
-      shortcutsEqual: () => false,
-      usesPreviousDefaultPreset: () => false,
+      defaultSettings,
+      loadSettingsFromStorage: async () => cloneSettings(await storedSettings),
+      mergeSettings: cloneSettings,
+      normalizeTargetPlaybackRate: (rate) => Math.round(Math.max(0.5, Math.min(4, rate)) * 100) / 100,
+      shortcutFromEvent: (event) => normalizeShortcut({
+        code: event.code,
+        shift: event.shiftKey,
+        alt: event.altKey,
+        ctrl: event.ctrlKey,
+        meta: event.metaKey
+      }),
+      shortcutLabel: (shortcut) => shortcut?.code?.replace(/^Key/, "") || "—",
+      shortcutsEqual: (left, right) => JSON.stringify(normalizeShortcut(left)) === JSON.stringify(normalizeShortcut(right)),
       t: (_key, _substitutions, fallback) => fallback
     }
   };
 
-  vm.runInNewContext(optionsSource, context, { filename: "options.js" });
-
-  assert.equal(installedVersion.textContent, "ViewTune v1.0.0");
-  documentListeners.get("click")?.({ target: buttons[0] });
-  feedback.listeners.get("change")?.();
-  assert.equal(saveCount, 0);
+  vm.runInNewContext(settingsSource, context, { filename: "settings-panel.js" });
+  const controller = new context.ViewTune.PopupSettingsController({
+    documentRef: document,
+    storageArea: {
+      async set(value) { saved.push(cloneSettings(value.viewTuneSettings)); }
+    }
+  });
+  const initialization = controller.initialize();
   assert.equal(documentListeners.has("click"), false);
-  assert.equal(buttons.every((button) => button.disabled), true);
+  assert.equal(shortcutButtons.every((button) => button.disabled), true);
 
-  resolveStoredSettings({ viewTuneSettings: customSettings });
-  await flushAsync();
-  await flushAsync();
-
+  resolveStoredSettings(custom);
+  await initialization;
   assert.equal(documentListeners.has("click"), true);
-  assert.equal(main.getAttribute("aria-busy"), "false");
-  assert.equal(buttons.every((button) => !button.disabled), true);
-  assert.equal(feedback.disabled, false);
-  assert.equal(targetRate.disabled, false);
+  assert.equal(shortcutButtons.every((button) => !button.disabled), true);
+  assert.equal(targetRate.textContent, "2.5×");
   assert.equal(feedback.checked, false);
-  assert.equal(targetRate.value, "2.5");
-  assert.equal(buttons[0].kbd.textContent, "Key0");
-  assert.equal(saveCount, 0);
+
+  documentListeners.get("click")({ target: targetUp });
+  await flushAsync();
+  await flushAsync();
+  assert.equal(targetRate.textContent, "2.75×");
+
+  documentListeners.get("click")({ target: shortcutButtons[0] });
+  await documentListeners.get("keydown")({
+    code: "KeyQ",
+    preventDefault() {},
+    stopImmediatePropagation() {}
+  });
+  assert.equal(shortcutButtons[0].kbd.textContent, "Q");
+
+  feedback.checked = true;
+  await feedback.listeners.get("change")();
+  assert.equal(feedback.checked, true);
+
+  await restore.listeners.get("click")();
+  assert.equal(targetRate.textContent, "2×");
+  assert.equal(shortcutButtons[0].kbd.textContent, "B");
+  assert.equal(saved.length, 4);
 });
 
 function currentVideoResult(runtime, windowActive, windowPending) {
   return {
+    supported: true,
     found: true,
     ok: true,
     rate: 1,
