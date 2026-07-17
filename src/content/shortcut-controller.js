@@ -27,6 +27,15 @@
       this.loadSettings();
     }
 
+    stop() {
+      this.document.removeEventListener("keydown", this.handleKeydown, true);
+      try {
+        chrome.storage.onChanged.removeListener(this.handleStorageChange);
+      } catch {
+        // 확장 새로고침으로 컨텍스트가 무효화된 뒤에는 storage 이벤트 접근도 실패할 수 있다.
+      }
+    }
+
     get document() {
       return this.videoController.document;
     }

@@ -11,6 +11,7 @@
 - `src/shared/constants.js`의 `BUILD_ID`가 새 버전으로 시작해야 한다.
 - 작업트리의 변경 범위가 의도한 릴리스와 일치해야 한다.
 - 스토어 설명·권한·개인정보 처리 내용이 실제 동작과 일치해야 한다.
+- 스토어 스크린샷은 현재 팝업과 기능을 정확히 보여줘야 한다.
 
 ## 릴리스 후보 만들기
 
@@ -29,21 +30,23 @@
    npm run check
    ```
 
-4. [사이트 호환성 회귀 검사](compatibility-regression.md)를 완료한다.
-5. 업로드 ZIP을 생성한다.
+4. [로컬 확장 개발 주기](local-extension-cycle.md)에 따라 확장과 테스트할 비디오 탭을 모두 새로고침한다. `chrome://extensions`의 오류 기록을 지운 뒤 실제 조작으로 새 오류가 생기지 않는지 확인한다. 이전 content script의 `Extension context invalidated` 기록은 새로고침 전에 남은 과거 기록인지 구분한다.
+5. [사이트 호환성 회귀 검사](compatibility-regression.md)를 완료한다.
+6. `release/store-assets/`의 스크린샷과 프로모션 이미지가 현재 UI와 일치하는지 확인한다. 필요하면 `scripts/generate-store-assets.ps1`로 다시 생성한다.
+7. 업로드 ZIP을 생성한다.
 
    ```powershell
    npm run package
    ```
 
-6. `release/packages/viewtune-<version>.zip`이 생성됐는지 확인한다. 패키징 스크립트는 ZIP 최상위의 `manifest.json`, 한·영 locale, 개발 전용 파일 제외 여부를 검증한다.
-7. 재현 가능한 인계를 위해 ZIP의 SHA-256과 크기를 기록한다.
+8. `release/packages/viewtune-<version>.zip`이 생성됐는지 확인한다. 패키징 스크립트는 ZIP 최상위의 `manifest.json`, 한·영 locale, 개발 전용 파일 제외 여부를 검증한다.
+9. 재현 가능한 인계를 위해 ZIP의 SHA-256과 크기를 기록한다.
 
    ```powershell
    Get-FileHash release/packages/viewtune-<version>.zip -Algorithm SHA256
    ```
 
-8. 소스 변경을 커밋하고 공개 GitHub 저장소의 기본 브랜치에 푸시한다. ZIP 자체는 저장소에 커밋하지 않는다.
+10. 소스 변경을 커밋하고 공개 GitHub 저장소의 기본 브랜치에 푸시한다. ZIP 자체는 저장소에 커밋하지 않는다.
 
 ## Developer Dashboard 제출
 

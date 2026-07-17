@@ -63,7 +63,7 @@
 
   const STORAGE_KEY = "viewTuneSettings";
 
-  const BUILD_ID = "0.3.0-20260717-target-mapping-v3";
+  const BUILD_ID = "0.3.0-20260717-runtime-lifecycle-v4";
   const MIN_PLAYBACK_RATE = 0.5;
   const MAX_PLAYBACK_RATE = 4;
   const DEFAULT_TARGET_PLAYBACK_RATE = 2;

@@ -416,6 +416,56 @@ test("Shadow DOM 경로 안의 편집기에서도 단축키를 무시한다", ()
   }), true);
 });
 
+test("ShortcutController stop은 키와 storage 리스너를 함께 해제한다", () => {
+  const previousChrome = globalThis.chrome;
+  const documentListeners = new Map();
+  let storageListener = null;
+  let removedStorageListener = null;
+  globalThis.chrome = {
+    storage: {
+      sync: {
+        async get() { return {}; },
+        async set() {}
+      },
+      onChanged: {
+        addListener(listener) { storageListener = listener; },
+        removeListener(listener) { removedStorageListener = listener; }
+      }
+    }
+  };
+
+  try {
+    const document = {
+      addEventListener(type, listener) { documentListeners.set(type, listener); },
+      removeEventListener(type, listener) {
+        if (documentListeners.get(type) === listener) {
+          documentListeners.delete(type);
+        }
+      }
+    };
+    const controller = new ShortcutController({
+      document,
+      window: {},
+      setFeedbackEnabled() {},
+      setTargetPlaybackRate() {}
+    }, () => {});
+
+    controller.start();
+    assert.equal(documentListeners.get("keydown"), controller.handleKeydown);
+    assert.equal(storageListener, controller.handleStorageChange);
+
+    controller.stop();
+    assert.equal(documentListeners.has("keydown"), false);
+    assert.equal(removedStorageListener, controller.handleStorageChange);
+  } finally {
+    if (previousChrome === undefined) {
+      delete globalThis.chrome;
+    } else {
+      globalThis.chrome = previousChrome;
+    }
+  }
+});
+
 test("설정된 화면 단축키는 적용 실패 시에도 YouTube로 새지 않는다", () => {
   let frameActivityCount = 0;
   let executedAction = null;
