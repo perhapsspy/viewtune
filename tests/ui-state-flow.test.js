@@ -74,6 +74,8 @@ function cloneSettings(settings) {
 function createPopupHarness(messageHandler) {
   const runtime = { buildId: "test-build", extensionId: "test-extension", manifestVersion: "1.0.0" };
   const elements = {
+    backButton: new FakeElement({ hidden: true }),
+    brandHeading: new FakeElement(),
     controlView: new FakeElement(),
     controls: new FakeElement(),
     installedVersion: new FakeElement(),
@@ -82,6 +84,7 @@ function createPopupHarness(messageHandler) {
     reloadTab: new FakeElement(),
     runtimeText: new FakeElement(),
     settingsToggle: new FakeElement(),
+    settingsHeading: new FakeElement({ hidden: true }),
     settingsView: new FakeElement({ hidden: true }),
     status: new FakeElement(),
     targetRateLabel: new FakeElement()
@@ -101,6 +104,8 @@ function createPopupHarness(messageHandler) {
     addEventListener(type, listener) { documentListeners.set(type, listener); },
     querySelector(selector) {
       return {
+        "#back-to-controls": elements.backButton,
+        "#brand-heading": elements.brandHeading,
         "#control-view": elements.controlView,
         "#controls": elements.controls,
         "#installed-version": elements.installedVersion,
@@ -109,6 +114,7 @@ function createPopupHarness(messageHandler) {
         "#reload-tab": elements.reloadTab,
         "#runtime": elements.runtimeText,
         "#toggle-settings": elements.settingsToggle,
+        "#settings-heading": elements.settingsHeading,
         "#settings-view": elements.settingsView,
         "#status": elements.status,
         "#target-rate-label": elements.targetRateLabel
@@ -190,17 +196,24 @@ test("popup은 설치 버전을 표시하고 같은 셸에서 설정 화면을 �
   await flushAsync();
 
   assert.equal(harness.elements.installedVersion.textContent, "v1.0.0");
+  assert.equal(harness.elements.status.hidden, true);
   assert.equal(harness.elements.controlView.hidden, false);
   assert.equal(harness.elements.settingsView.hidden, true);
 
   harness.elements.settingsToggle.listeners.get("click")();
   assert.equal(harness.elements.controlView.hidden, true);
   assert.equal(harness.elements.settingsView.hidden, false);
+  assert.equal(harness.elements.backButton.hidden, false);
+  assert.equal(harness.elements.brandHeading.hidden, true);
+  assert.equal(harness.elements.settingsHeading.hidden, false);
+  assert.equal(harness.elements.settingsToggle.hidden, true);
   assert.equal(harness.elements.settingsToggle.getAttribute("aria-pressed"), "true");
 
-  harness.elements.settingsToggle.listeners.get("click")();
+  harness.elements.backButton.listeners.get("click")();
   assert.equal(harness.settingsController.cancelCount, 1);
   assert.equal(harness.elements.controlView.hidden, false);
+  assert.equal(harness.elements.settingsView.hidden, true);
+  assert.equal(harness.elements.settingsToggle.hidden, false);
 });
 
 test("V 지연 검증이 원복되면 popup의 활성 상태도 최신 status로 돌아온다", async () => {

@@ -11,13 +11,16 @@
   "shortcutUnassigned": { "message": "미지정" },
   "installedVersionAria": { "message": "설치된 ViewTune 버전" },
   "popupTitle": { "message": "ViewTune" },
+  "popupSettingsTab": { "message": "설정" },
   "popupOpenSettings": { "message": "ViewTune 설정 열기" },
   "popupCloseSettings": { "message": "설정 닫기" },
   "popupSettingsAria": { "message": "ViewTune 설정" },
   "popupCheckingTab": { "message": "현재 탭을 확인하는 중…" },
-  "popupReloadTab": { "message": "새로고침" },
+  "popupReloadTab": { "message": "이 탭 다시 불러오기" },
   "popupControlsAria": { "message": "현재 비디오 제어" },
   "popupPlaybackSpeed": { "message": "재생 속도" },
+  "popupFrameModes": { "message": "화면 모드" },
+  "popupFitShort": { "message": "맞춤" },
   "popupCurrentRateAria": { "message": "현재 재생 속도" },
   "popupNoActiveTab": { "message": "현재 탭을 확인할 수 없어요." },
   "popupUnavailable": { "message": "이 탭에서는 ViewTune을 사용할 수 없어요." },
@@ -30,7 +33,7 @@
     "placeholders": { "action": { "content": "$1" }, "key": { "content": "$2" } }
   },
   "popupTargetAction": { "message": "목표 속도 $RATE$×", "placeholders": { "rate": { "content": "$1" } } },
-  "popupUpdateRequired": { "message": "업데이트 적용 필요 — 이 탭은 이전 ViewTune 코드입니다." },
+  "popupUpdateRequired": { "message": "이 탭이 이전 ViewTune 코드를 사용 중입니다." },
   "popupRuntimeExpected": {
     "message": "확장 v$VERSION$ · $BUILD$",
     "placeholders": { "version": { "content": "$1" }, "build": { "content": "$2" } }
@@ -53,6 +56,8 @@
   "settingsFeedbackAria": { "message": "화면 피드백" },
   "settingsRestoreDefaults": { "message": "기본값 복원" },
   "settingsShortcutsAria": { "message": "단축키" },
+  "settingsFrameShortcutsAria": { "message": "화면 모드 단축키" },
+  "settingsSpeedShortcutsAria": { "message": "재생 속도 단축키" },
   "settingsReadFailed": { "message": "설정을 읽지 못했어요." },
   "settingsChangeShortcutAria": {
     "message": "$ACTION$ 단축키 변경, 현재 $KEY$",

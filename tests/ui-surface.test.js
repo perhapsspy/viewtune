@@ -48,36 +48,44 @@ test("popup은 300px 단일 셸에서 조작 화면과 설정 화면을 교체�
   assert.match(popupHtml, /settings-panel\.js[\s\S]+popup\.js/);
   assert.match(popupHtml, /id="control-view"/);
   assert.match(popupHtml, /id="settings-view"[^>]+hidden/);
+  assert.match(popupHtml, /id="back-to-controls"[^>]+hidden/);
   assert.match(popupJs, /elements\.controlView\.hidden = state\.settingsVisible/);
   assert.match(popupJs, /elements\.settingsView\.hidden = !state\.settingsVisible/);
+  assert.match(popupJs, /elements\.settingsToggle\.hidden = state\.settingsVisible/);
   assert.match(popupCss, /body\s*\{\s*width: 300px/);
   assert.match(themeCss, /--vt-color-accent:/);
   assert.match(themeCss, /prefers-reduced-motion: reduce/);
 });
 
-test("기본 화면은 수치·키캡·도형으로 여섯 동작과 상태를 압축한다", () => {
+test("기본 화면은 속도 4분할 스트립과 화면 모드 2버튼만 남긴다", () => {
   assert.equal((popupHtml.match(/data-action="/g) || []).length, 6);
-  assert.equal((popupHtml.match(/aria-pressed="false"/g) || []).length, 3);
-  assert.match(popupHtml, /data-action="speedDown"[\s\S]+−\.5/);
-  assert.match(popupHtml, /data-action="speedUp"[\s\S]+\+\.5/);
-  assert.match(popupHtml, /data-action="wide"[\s\S]+21:9/);
+  assert.equal((popupHtml.match(/data-mode="/g) || []).length, 2);
+  const speedStrip = popupHtml.slice(popupHtml.indexOf("class=\"speed-strip\""), popupHtml.indexOf("class=\"mode-row\""));
+  assert.match(speedStrip, /data-action="speedDown"[\s\S]+data-action="speedReset"[\s\S]+data-action="speedUp"[\s\S]+data-action="speedTarget"/);
+  assert.match(popupHtml, /class="mode-row"[\s\S]+data-mode="window"[\s\S]+data-mode="wide"/);
   assert.match(popupHtml, /id="rate"[^>]+aria-live="polite"/);
   assert.match(popupJs, /setAttribute\("aria-pressed", String\(active\)\)/);
+  assert.match(popupJs, /elements\.status\.hidden = !actionFailed/);
+  assert.match(popupCss, /\.speed-strip[\s\S]+min-height: 44px[\s\S]+grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(popupCss, /\.rate-segment output[\s\S]+font-size: 18px/);
+  assert.match(popupCss, /\.mode-button\[data-active="true"\][\s\S]+border-color:[\s\S]+background:[\s\S]+box-shadow:/);
+  assert.match(popupCss, /\.mode-button\[data-active="true"\] \.mode-check[\s\S]+visibility: visible/);
   assert.match(popupCss, /font-variant-numeric: tabular-nums/);
   assert.match(popupCss, /@media \(forced-colors: active\)/);
 });
 
-test("설정 화면은 별도 페이지 없이 키·목표 속도·피드백·초기화를 모두 제공한다", () => {
+test("설정 화면은 목표 행과 속도 3칸·화면 2칸 편집 구조를 사용한다", () => {
   assert.equal((popupHtml.match(/data-record-action="/g) || []).length, 6);
   assert.equal((popupHtml.match(/data-setting-action="/g) || []).length, 2);
   assert.match(
     popupHtml,
     /class="target-action-card"[\s\S]+data-record-action="speedTarget"[\s\S]+id="target-playback-rate"/
   );
-  const shortcutGrid = popupHtml.slice(popupHtml.indexOf("class=\"shortcut-grid\""));
-  assert.equal((shortcutGrid.match(/data-record-action="/g) || []).length, 5);
-  assert.doesNotMatch(shortcutGrid, /data-record-action="speedTarget"/);
-  assert.match(popupCss, /grid-template-columns: repeat\(5, minmax\(0, 1fr\)\)/);
+  const settingsView = popupHtml.slice(popupHtml.indexOf("id=\"settings-view\""));
+  assert.equal((settingsView.match(/data-record-action="/g) || []).length, 6);
+  assert.match(settingsView, /class="settings-speed-strip"[\s\S]+data-record-action="speedDown"[\s\S]+data-record-action="speedReset"[\s\S]+data-record-action="speedUp"/);
+  assert.match(settingsView, /class="settings-mode-row"[\s\S]+data-record-action="window"[\s\S]+data-record-action="wide"/);
+  assert.doesNotMatch(popupCss, /repeat\(5, minmax\(0, 1fr\)\)/);
   assert.match(popupHtml, /id="show-feedback"/);
   assert.match(popupHtml, /id="restore-defaults"/);
   assert.match(settingsJs, /loadSettingsFromStorage\(this\.storageArea, \{ migrate: true \}\)/);
@@ -87,6 +95,8 @@ test("설정 화면은 별도 페이지 없이 키·목표 속도·피드백·�
   assert.equal(Object.keys(koMessages).some((key) => key.startsWith("options")), false);
   assert.equal(enMessages.settingsTargetMappingAria.message, "Target speed shortcut and playback speed");
   assert.equal(koMessages.settingsTargetMappingAria.message, "목표 속도 단축키와 재생 속도");
+  assert.equal(enMessages.popupFitShort.message, "Fit");
+  assert.equal(koMessages.popupFitShort.message, "맞춤");
 });
 
 test("빌드 진단은 정상 상태에서 숨고 설치 버전은 항상 표시된다", () => {

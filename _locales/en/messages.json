@@ -11,13 +11,16 @@
   "shortcutUnassigned": { "message": "Unassigned" },
   "installedVersionAria": { "message": "Installed ViewTune version" },
   "popupTitle": { "message": "ViewTune" },
+  "popupSettingsTab": { "message": "Settings" },
   "popupOpenSettings": { "message": "Open ViewTune settings" },
   "popupCloseSettings": { "message": "Close settings" },
   "popupSettingsAria": { "message": "ViewTune settings" },
   "popupCheckingTab": { "message": "Checking the current tab…" },
-  "popupReloadTab": { "message": "Reload" },
+  "popupReloadTab": { "message": "Reload this tab" },
   "popupControlsAria": { "message": "Current video controls" },
   "popupPlaybackSpeed": { "message": "Playback speed" },
+  "popupFrameModes": { "message": "Frame modes" },
+  "popupFitShort": { "message": "Fit" },
   "popupCurrentRateAria": { "message": "Current playback speed" },
   "popupNoActiveTab": { "message": "The current tab is unavailable." },
   "popupUnavailable": { "message": "ViewTune can't be used in this tab." },
@@ -30,7 +33,7 @@
     "placeholders": { "action": { "content": "$1" }, "key": { "content": "$2" } }
   },
   "popupTargetAction": { "message": "Target speed $RATE$×", "placeholders": { "rate": { "content": "$1" } } },
-  "popupUpdateRequired": { "message": "Update required — this tab is running older ViewTune code." },
+  "popupUpdateRequired": { "message": "This tab is using older ViewTune code." },
   "popupRuntimeExpected": {
     "message": "Extension v$VERSION$ · $BUILD$",
     "placeholders": { "version": { "content": "$1" }, "build": { "content": "$2" } }
@@ -53,6 +56,8 @@
   "settingsFeedbackAria": { "message": "On-screen feedback" },
   "settingsRestoreDefaults": { "message": "Restore defaults" },
   "settingsShortcutsAria": { "message": "Shortcuts" },
+  "settingsFrameShortcutsAria": { "message": "Frame mode shortcuts" },
+  "settingsSpeedShortcutsAria": { "message": "Playback speed shortcuts" },
   "settingsReadFailed": { "message": "Settings couldn't be read." },
   "settingsChangeShortcutAria": {
     "message": "Change $ACTION$ shortcut, currently $KEY$",

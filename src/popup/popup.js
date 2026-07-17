@@ -29,6 +29,8 @@
   };
 
   const elements = {
+    backButton: document.querySelector("#back-to-controls"),
+    brandHeading: document.querySelector("#brand-heading"),
     controlView: document.querySelector("#control-view"),
     controls: document.querySelector("#controls"),
     installedVersion: document.querySelector("#installed-version"),
@@ -37,6 +39,7 @@
     reloadTab: document.querySelector("#reload-tab"),
     runtime: document.querySelector("#runtime"),
     settingsToggle: document.querySelector("#toggle-settings"),
+    settingsHeading: document.querySelector("#settings-heading"),
     settingsView: document.querySelector("#settings-view"),
     status: document.querySelector("#status"),
     targetRateLabel: document.querySelector("#target-rate-label"),
@@ -71,12 +74,13 @@
         executeAction(actionButton.dataset.action);
       }
     });
-    elements.settingsToggle.addEventListener("click", toggleSettings);
+    elements.settingsToggle.addEventListener("click", () => setSettingsVisible(true));
+    elements.backButton.addEventListener("click", () => setSettingsVisible(false));
     elements.reloadTab.addEventListener("click", reloadActiveTab);
   }
 
-  function toggleSettings() {
-    state.settingsVisible = !state.settingsVisible;
+  function setSettingsVisible(visible) {
+    state.settingsVisible = visible;
     if (!state.settingsVisible) {
       settingsController.cancelRecording();
     }
@@ -87,10 +91,12 @@
     elements.panel.dataset.view = state.settingsVisible ? "settings" : "controls";
     elements.controlView.hidden = state.settingsVisible;
     elements.settingsView.hidden = !state.settingsVisible;
+    elements.backButton.hidden = !state.settingsVisible;
+    elements.brandHeading.hidden = state.settingsVisible;
+    elements.settingsHeading.hidden = !state.settingsVisible;
+    elements.settingsToggle.hidden = state.settingsVisible;
     elements.settingsToggle.setAttribute("aria-pressed", String(state.settingsVisible));
-    const label = state.settingsVisible
-      ? t("popupCloseSettings", undefined, "설정 닫기")
-      : t("popupOpenSettings", undefined, "ViewTune 설정 열기");
+    const label = t("popupOpenSettings", undefined, "ViewTune 설정 열기");
     elements.settingsToggle.setAttribute("aria-label", label);
     elements.settingsToggle.title = label;
   }
@@ -193,6 +199,7 @@
 
     const actionFailed = result.ok === false && result.message;
     state.hasVideo = true;
+    elements.status.hidden = !actionFailed;
     elements.status.textContent = actionFailed
       ? result.message
       : t("popupConnected", undefined, "Ready");
@@ -205,6 +212,7 @@
   function renderDisconnected(message, tone = "neutral") {
     state.hasVideo = false;
     elements.status.textContent = message;
+    elements.status.hidden = false;
     elements.status.dataset.tone = tone;
     elements.rate.textContent = "—";
     elements.reloadTab.hidden = true;
@@ -252,6 +260,7 @@
   function renderStaleRuntime(pageRuntime) {
     state.hasVideo = false;
     elements.status.textContent = t("popupUpdateRequired", undefined, "업데이트 적용 필요");
+    elements.status.hidden = false;
     elements.status.dataset.tone = "neutral";
     elements.rate.textContent = "—";
     elements.reloadTab.hidden = false;

@@ -126,53 +126,42 @@ try {
   Text $g "1:00" 153 560 14 "b7c0cf"
   Text $g "[ ]" 742 556 20 "b7c0cf" ([Drawing.FontStyle]::Bold)
 
-  FillRound $g $panelBrush ([Drawing.RectangleF]::new(866,136,356,584)) 26
-  StrokeRound $g $accentPen ([Drawing.RectangleF]::new(866,136,356,584)) 26
-  DrawMark $g 894 164 38
-  Text $g "ViewTune" 943 168 22 "f5f7fb" ([Drawing.FontStyle]::Bold)
-  Text $g "x" 1168 170 18 "8f98a8" ([Drawing.FontStyle]::Bold)
+  FillRound $g $panelBrush ([Drawing.RectangleF]::new(866,220,356,260)) 26
+  StrokeRound $g $accentPen ([Drawing.RectangleF]::new(866,220,356,260)) 26
+  DrawMark $g 894 245 38
+  Text $g "ViewTune" 943 249 22 "f5f7fb" ([Drawing.FontStyle]::Bold)
 
   $cardBrush = [Drawing.SolidBrush]::new((Color "171d27"))
   $buttonBrush = [Drawing.SolidBrush]::new((Color "10151d"))
   $keyPen = [Drawing.Pen]::new((Color "526078"), 1)
+  $dividerPen = [Drawing.Pen]::new((Color "2a313f"), 1)
   try {
-    # Current popup settings: one G -> target-speed mapping card.
-    FillRound $g $cardBrush ([Drawing.RectangleF]::new(894,236,190,58)) 12
-    FillRound $g $buttonBrush ([Drawing.RectangleF]::new(902,245,42,40)) 8
-    StrokeRound $g $keyPen ([Drawing.RectangleF]::new(908,253,30,24)) 5
-    Text $g "G" 918 256 13 "edf2ff" ([Drawing.FontStyle]::Bold)
-    Text $g "->" 950 255 15 "7f8999" ([Drawing.FontStyle]::Bold)
-    Text $g "-" 979 253 17 "aab3c2" ([Drawing.FontStyle]::Bold)
-    Text $g "2x" 1001 253 17 "f4f7fb" ([Drawing.FontStyle]::Bold)
-    Text $g "+" 1051 253 17 "aab3c2" ([Drawing.FontStyle]::Bold)
-
-    FillRound $g $cardBrush ([Drawing.RectangleF]::new(1092,236,48,58)) 12
-    Text $g "..." 1104 249 16 "a8c1ff" ([Drawing.FontStyle]::Bold)
-    $feedbackDot = [Drawing.SolidBrush]::new((Color "86aaff"))
-    try { $g.FillEllipse($feedbackDot,1125,272,6,6) } finally { $feedbackDot.Dispose() }
-    FillRound $g $cardBrush ([Drawing.RectangleF]::new(1148,236,46,58)) 12
-    Text $g "R" 1162 253 16 "9da7b8" ([Drawing.FontStyle]::Bold)
-
-    # Five remaining shortcuts in the compact grid.
-    $shortcutSpecs = @(
-      @{ Glyph = "21:9"; Key = "B" },
-      @{ Glyph = "FIT"; Key = "V" },
-      @{ Glyph = "-.5"; Key = "[" },
-      @{ Glyph = "+.5"; Key = "]" },
-      @{ Glyph = "1x"; Key = "R" }
-    )
-    for ($i = 0; $i -lt $shortcutSpecs.Count; $i++) {
-      $x = 894 + ($i * 60)
-      FillRound $g $cardBrush ([Drawing.RectangleF]::new($x,312,52,82)) 10
-      Text $g $shortcutSpecs[$i].Glyph ($x + 7) 323 12 "aeb7c5" ([Drawing.FontStyle]::Bold)
-      StrokeRound $g $keyPen ([Drawing.RectangleF]::new($x+11,358,30,24)) 5
-      Text $g $shortcutSpecs[$i].Key ($x+21) 361 12 "edf2ff" ([Drawing.FontStyle]::Bold)
+    # Current popup: four equal playback segments.
+    FillRound $g $cardBrush ([Drawing.RectangleF]::new(894,300,300,54)) 11
+    for ($i = 1; $i -lt 4; $i++) {
+      $dividerX = 894 + ($i * 75)
+      $g.DrawLine($dividerPen, $dividerX, 300, $dividerX, 354)
     }
-  } finally { $cardBrush.Dispose(); $buttonBrush.Dispose(); $keyPen.Dispose() }
+    Text $g "-.5" 913 313 14 "aeb7c5" ([Drawing.FontStyle]::Bold)
+    Text $g "[" 944 315 11 "8290a4" ([Drawing.FontStyle]::Bold)
+    Text $g "1x" 983 309 20 "f4f7fb" ([Drawing.FontStyle]::Bold)
+    Text $g "R" 1023 315 11 "8290a4" ([Drawing.FontStyle]::Bold)
+    Text $g "+.5" 1061 313 14 "aeb7c5" ([Drawing.FontStyle]::Bold)
+    Text $g "]" 1094 315 11 "8290a4" ([Drawing.FontStyle]::Bold)
+    Text $g "G" 1131 315 11 "a8c1ff" ([Drawing.FontStyle]::Bold)
+    Text $g "->" 1147 313 12 "8290a4" ([Drawing.FontStyle]::Bold)
+    Text $g "2x" 1170 311 17 "a8c1ff" ([Drawing.FontStyle]::Bold)
 
-  Text $g "G -> target speed" 894 424 15 "b9cbff" ([Drawing.FontStyle]::Bold)
-  Text $g "Shortcut and speed stay together." 894 452 13 "909bab"
-  Text $g "v0.3.0" 1148 678 11 "697486"
+    # Two independent frame-mode buttons.
+    FillRound $g $cardBrush ([Drawing.RectangleF]::new(894,366,146,58)) 11
+    FillRound $g $cardBrush ([Drawing.RectangleF]::new(1048,366,146,58)) 11
+    Text $g "FIT" 912 383 14 "dce1eb" ([Drawing.FontStyle]::Bold)
+    StrokeRound $g $keyPen ([Drawing.RectangleF]::new(996,383,26,22)) 5
+    Text $g "V" 1005 385 11 "edf2ff" ([Drawing.FontStyle]::Bold)
+    Text $g "21:9" 1066 383 14 "dce1eb" ([Drawing.FontStyle]::Bold)
+    StrokeRound $g $keyPen ([Drawing.RectangleF]::new(1150,383,26,22)) 5
+    Text $g "B" 1159 385 11 "edf2ff" ([Drawing.FontStyle]::Bold)
+  } finally { $cardBrush.Dispose(); $buttonBrush.Dispose(); $keyPen.Dispose(); $dividerPen.Dispose() }
 
   $bmp.Save((Join-Path $outputRoot "viewtune-screenshot-1280x800.png"), [Drawing.Imaging.ImageFormat]::Png)
 } finally { $panelBrush.Dispose(); $panel2.Dispose(); $videoBrush.Dispose(); $accentPen.Dispose(); $softPen.Dispose(); $g.Dispose(); $bmp.Dispose() }

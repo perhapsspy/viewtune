@@ -15,19 +15,19 @@
   <body>
     <main class="panel" data-view="controls">
       <header class="header">
-        <div class="brand-row">
+        <button id="back-to-controls" class="back-button" type="button" aria-label="설정 닫기" data-i18n-aria-label="popupCloseSettings" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 6-6 6 6 6"></path></svg>
+        </button>
+        <div id="brand-heading" class="brand-row">
           <span class="vt-brand-mark" aria-hidden="true"></span>
           <h1>ViewTune</h1>
         </div>
-        <button id="toggle-settings" class="icon-button" type="button" aria-pressed="false" aria-label="ViewTune 설정 열기" data-i18n-aria-label="popupOpenSettings">
-          <svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 13a7.8 7.8 0 0 0 0-2l2-1.5-2-3.4-2.5 1a8 8 0 0 0-1.7-1L14.8 3h-4l-.4 3.1a8 8 0 0 0-1.7 1l-2.5-1-2 3.4 2 1.5a7.8 7.8 0 0 0 0 2l-2 1.5 2 3.4 2.5-1a8 8 0 0 0 1.7 1l.4 3.1h4l.4-3.1a8 8 0 0 0 1.7-1l2.5 1 2-3.4-2-1.5Z"></path>
-          </svg>
-          <svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m8 8 8 8M16 8l-8 8"></path>
-          </svg>
-        </button>
+        <h1 id="settings-heading" data-i18n="popupSettingsTab" hidden>설정</h1>
+        <div class="header-actions">
+          <button id="toggle-settings" class="icon-button" type="button" aria-label="ViewTune 설정 열기" data-i18n-aria-label="popupOpenSettings">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 13a7.8 7.8 0 0 0 0-2l2-1.5-2-3.4-2.5 1a8 8 0 0 0-1.7-1L14.8 3h-4l-.4 3.1a8 8 0 0 0-1.7 1l-2.5-1-2 3.4 2 1.5a7.8 7.8 0 0 0 0 2l-2 1.5 2 3.4 2.5-1a8 8 0 0 0 1.7 1l.4 3.1h4l.4-3.1a8 8 0 0 0 1.7-1l2.5 1 2-3.4-2-1.5Z"></path></svg>
+          </button>
+        </div>
       </header>
 
       <section id="control-view" class="view" aria-label="현재 비디오 제어" data-i18n-aria-label="popupControlsAria">
@@ -35,93 +35,49 @@
         <button id="reload-tab" class="reload-button" type="button" hidden data-i18n="popupReloadTab">새로고침</button>
 
         <div id="controls" class="controls">
-          <div class="speed-row" role="group" aria-label="재생 속도" data-i18n-aria-label="popupPlaybackSpeed">
-            <button type="button" class="speed-button" data-action="speedDown">
-              <span aria-hidden="true">−.5</span>
-              <kbd data-shortcut-for="speedDown">[</kbd>
-            </button>
-            <button type="button" class="rate-button" data-action="speedReset">
-              <output id="rate" aria-label="현재 재생 속도" data-i18n-aria-label="popupCurrentRateAria" aria-live="polite">—</output>
-              <kbd data-shortcut-for="speedReset">R</kbd>
-            </button>
-            <button type="button" class="speed-button" data-action="speedUp">
-              <span aria-hidden="true">+.5</span>
-              <kbd data-shortcut-for="speedUp">]</kbd>
-            </button>
+          <div class="speed-strip" role="group" aria-label="재생 속도" data-i18n-aria-label="popupPlaybackSpeed">
+            <button type="button" class="speed-segment" data-action="speedDown"><span aria-hidden="true">−.5</span><kbd data-shortcut-for="speedDown">[</kbd></button>
+            <button type="button" class="rate-segment" data-action="speedReset"><output id="rate" aria-label="현재 재생 속도" data-i18n-aria-label="popupCurrentRateAria" aria-live="polite">—</output><kbd data-shortcut-for="speedReset">R</kbd></button>
+            <button type="button" class="speed-segment" data-action="speedUp"><span aria-hidden="true">+.5</span><kbd data-shortcut-for="speedUp">]</kbd></button>
+            <button type="button" class="target-segment" data-action="speedTarget"><kbd data-shortcut-for="speedTarget">G</kbd><span aria-hidden="true">→</span><strong id="target-rate-label">2×</strong></button>
           </div>
 
-          <div class="quick-row">
-            <button type="button" class="quick-button target-button" data-action="speedTarget">
-              <span class="target-glyph" aria-hidden="true">→</span>
-              <strong id="target-rate-label">2×</strong>
-              <kbd data-shortcut-for="speedTarget">G</kbd>
-            </button>
-            <button type="button" class="quick-button mode-button" data-action="window" data-mode="window" aria-pressed="false">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="3.5" y="5" width="17" height="14" rx="2"></rect>
-                <path d="M8 9H6v2M16 15h2v-2"></path>
-              </svg>
-              <kbd data-shortcut-for="window">V</kbd>
-            </button>
-            <button type="button" class="quick-button mode-button" data-action="wide" data-mode="wide" aria-pressed="false">
-              <span class="ratio-glyph" aria-hidden="true">21:9</span>
-              <kbd data-shortcut-for="wide">B</kbd>
-            </button>
+          <div class="mode-row" role="group" aria-label="화면 모드" data-i18n-aria-label="popupFrameModes">
+            <button type="button" class="mode-button" data-action="window" data-mode="window" aria-pressed="false"><span class="mode-icon fit-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2"></rect><path d="M8 9H6v2M16 15h2v-2"></path></svg></span><span data-i18n="popupFitShort">맞춤</span><span class="mode-end"><span class="mode-check" aria-hidden="true">✓</span><kbd data-shortcut-for="window">V</kbd></span></button>
+            <button type="button" class="mode-button" data-action="wide" data-mode="wide" aria-pressed="false"><span class="mode-icon wide-icon" aria-hidden="true">21:9</span><span>21:9</span><span class="mode-end"><span class="mode-check" aria-hidden="true">✓</span><kbd data-shortcut-for="wide">B</kbd></span></button>
           </div>
         </div>
       </section>
 
       <section id="settings-view" class="view settings-view" aria-label="ViewTune 설정" data-i18n-aria-label="popupSettingsAria" aria-busy="true" hidden>
-        <div class="settings-toolbar">
-          <div class="target-action-card" role="group" aria-label="목표 속도 단축키와 재생 속도" data-i18n-aria-label="settingsTargetMappingAria">
-            <button type="button" class="target-shortcut-button" data-record-action="speedTarget" disabled>
-              <kbd>—</kbd>
-            </button>
-            <span class="target-map-arrow" aria-hidden="true">→</span>
-            <div class="target-stepper" role="group" aria-label="목표 재생 속도" data-i18n-aria-label="settingsTargetRateAria">
-              <button type="button" data-setting-action="targetDown" aria-label="목표 속도 낮추기" data-i18n-aria-label="settingsTargetDown" disabled>−</button>
-              <output id="target-playback-rate" aria-live="polite">2×</output>
-              <button type="button" data-setting-action="targetUp" aria-label="목표 속도 높이기" data-i18n-aria-label="settingsTargetUp" disabled>+</button>
-            </div>
+        <div class="target-action-card" role="group" aria-label="목표 속도 단축키와 재생 속도" data-i18n-aria-label="settingsTargetMappingAria">
+          <button type="button" class="target-shortcut-button" data-record-action="speedTarget" disabled><kbd>—</kbd></button>
+          <span class="target-map-arrow" aria-hidden="true">→</span>
+          <div class="target-stepper" role="group" aria-label="목표 재생 속도" data-i18n-aria-label="settingsTargetRateAria">
+            <button type="button" data-setting-action="targetDown" aria-label="목표 속도 낮추기" data-i18n-aria-label="settingsTargetDown" disabled>−</button>
+            <output id="target-playback-rate" aria-live="polite">2×</output>
+            <button type="button" data-setting-action="targetUp" aria-label="목표 속도 높이기" data-i18n-aria-label="settingsTargetUp" disabled>+</button>
           </div>
-
-          <label class="feedback-toggle">
-            <input id="show-feedback" type="checkbox" disabled>
-            <span class="feedback-control">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5h14v9H10l-4 3v-3H5z"></path></svg>
-              <i aria-hidden="true"></i>
-            </span>
-            <span class="sr-only" data-i18n="settingsFeedbackAria">화면 피드백</span>
-          </label>
-
-          <button id="restore-defaults" class="utility-button" type="button" aria-label="기본값 복원" data-i18n-aria-label="settingsRestoreDefaults" disabled>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 8H3V4.5M3.5 8A9 9 0 1 1 4 17"></path></svg>
-          </button>
         </div>
 
-        <div class="shortcut-grid" aria-label="단축키" data-i18n-aria-label="settingsShortcutsAria">
-          <button type="button" class="shortcut-button" data-record-action="wide" disabled>
-            <span class="shortcut-glyph ratio-glyph" aria-hidden="true">21:9</span><kbd>—</kbd>
-          </button>
-          <button type="button" class="shortcut-button" data-record-action="window" disabled>
-            <span class="shortcut-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2"></rect><path d="M8 9H6v2M16 15h2v-2"></path></svg></span><kbd>—</kbd>
-          </button>
-          <button type="button" class="shortcut-button" data-record-action="speedDown" disabled>
-            <span class="shortcut-glyph" aria-hidden="true">−.5</span><kbd>—</kbd>
-          </button>
-          <button type="button" class="shortcut-button" data-record-action="speedUp" disabled>
-            <span class="shortcut-glyph" aria-hidden="true">+.5</span><kbd>—</kbd>
-          </button>
-          <button type="button" class="shortcut-button" data-record-action="speedReset" disabled>
-            <span class="shortcut-glyph" aria-hidden="true">1×</span><kbd>—</kbd>
-          </button>
+        <div class="settings-speed-strip" role="group" aria-label="재생 속도 단축키" data-i18n-aria-label="settingsSpeedShortcutsAria">
+          <button type="button" class="shortcut-cell" data-record-action="speedDown" disabled><span aria-hidden="true">−.5</span><kbd>—</kbd></button>
+          <button type="button" class="shortcut-cell" data-record-action="speedReset" disabled><span aria-hidden="true">1×</span><kbd>—</kbd></button>
+          <button type="button" class="shortcut-cell" data-record-action="speedUp" disabled><span aria-hidden="true">+.5</span><kbd>—</kbd></button>
         </div>
+
+        <div class="settings-mode-row" role="group" aria-label="화면 모드 단축키" data-i18n-aria-label="settingsFrameShortcutsAria">
+          <button type="button" class="shortcut-cell" data-record-action="window" disabled><span class="mode-icon fit-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2"></rect><path d="M8 9H6v2M16 15h2v-2"></path></svg></span><span data-i18n="popupFitShort">맞춤</span><kbd>—</kbd></button>
+          <button type="button" class="shortcut-cell" data-record-action="wide" disabled><span class="mode-icon wide-icon" aria-hidden="true">21:9</span><span>21:9</span><kbd>—</kbd></button>
+        </div>
+
+        <label class="feedback-toggle"><span data-i18n="settingsFeedbackAria">화면 피드백</span><input id="show-feedback" type="checkbox" disabled><span class="feedback-control" aria-hidden="true"><i></i></span></label>
 
         <p id="settings-note" class="settings-note" aria-live="polite"></p>
+        <footer class="settings-footer"><button id="restore-defaults" class="restore-button" type="button" disabled><span data-i18n="settingsRestoreDefaults">기본값 복원</span></button><p id="installed-version" class="installed-version" data-i18n-aria-label="installedVersionAria" aria-label="설치된 ViewTune 버전">v—</p></footer>
       </section>
 
       <p id="runtime" class="runtime" hidden></p>
-      <p id="installed-version" class="installed-version" data-i18n-aria-label="installedVersionAria" aria-label="설치된 ViewTune 버전">v—</p>
     </main>
   </body>
 </html>
