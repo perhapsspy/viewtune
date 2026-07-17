@@ -11,8 +11,9 @@ Thumbs.db
 Desktop.ini
 coverage/
 
-# Local project context and release working state
+# Local task context and generated release packages
 docs/tasks/
-docs/reference/
+docs/reference/*
+!docs/reference/runbooks/
+!docs/reference/runbooks/**
 release/packages/
-release/RELEASE_CHECKLIST.md

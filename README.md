@@ -80,6 +80,8 @@ npm run check
 npm run package
 ```
 
+반복 작업의 전체 절차는 [운영 런북](docs/reference/runbooks/README.md)에서 확인할 수 있습니다.
+
 ## 개인정보처리방침과 지원
 
 - [개인정보처리방침](https://perhapsspy.github.io/viewtune/privacy-policy.html)
