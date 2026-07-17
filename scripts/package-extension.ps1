@@ -27,6 +27,7 @@ $zipPath = Join-Path $outputRoot ("viewtune-{0}.zip" -f $manifest.version)
 
 try {
   Copy-Item -LiteralPath $manifestPath -Destination $stageRoot
+  Copy-Item -LiteralPath (Join-Path $projectRoot "_locales") -Destination $stageRoot -Recurse
   Copy-Item -LiteralPath (Join-Path $projectRoot "assets") -Destination $stageRoot -Recurse
   Copy-Item -LiteralPath (Join-Path $projectRoot "src") -Destination $stageRoot -Recurse
 
@@ -38,9 +39,14 @@ try {
   Add-Type -AssemblyName System.IO.Compression.FileSystem
   $archive = [IO.Compression.ZipFile]::OpenRead($zipPath)
   try {
-    $entryNames = @($archive.Entries | ForEach-Object FullName)
+    $entryNames = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\', '/') })
     if ($entryNames -notcontains "manifest.json") {
       throw "ZIP 최상위에 manifest.json이 없습니다."
+    }
+    foreach ($localePath in @("_locales/en/messages.json", "_locales/ko/messages.json")) {
+      if ($entryNames -notcontains $localePath) {
+        throw "ZIP에 현지화 카탈로그가 없습니다: $localePath"
+      }
     }
     if ($entryNames | Where-Object { $_ -match '(^|/)(tests|release|\.git)/' }) {
       throw "배포 ZIP에 개발 전용 파일이 포함됐습니다."

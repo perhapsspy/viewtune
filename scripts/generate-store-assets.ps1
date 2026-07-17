@@ -78,7 +78,7 @@ try {
   DrawMark $g 34 72 112
   Text $g "ViewTune" 165 78 38 "f4f7fb" ([Drawing.FontStyle]::Bold)
   Text $g "VIDEO PACE & FRAME" 168 126 12 "9fb7f1" ([Drawing.FontStyle]::Bold)
-  Text $g "0.5x" 169 174 18 "d8e2ff" ([Drawing.FontStyle]::Bold)
+  Text $g "2x  G" 169 174 18 "d8e2ff" ([Drawing.FontStyle]::Bold)
   Text $g "FIT" 244 174 18 "d8e2ff" ([Drawing.FontStyle]::Bold)
   Text $g "21:9" 307 174 18 "d8e2ff" ([Drawing.FontStyle]::Bold)
   $linePen = [Drawing.Pen]::new((Color "86aaff"), 3)
@@ -139,10 +139,13 @@ try {
   try {
     FillRound $g $buttonBrush ([Drawing.RectangleF]::new(914,344,64,64)) 14
     FillRound $g $buttonBrush ([Drawing.RectangleF]::new(1110,344,64,64)) 14
+    FillRound $g $buttonBrush ([Drawing.RectangleF]::new(914,414,260,22)) 8
   } finally { $buttonBrush.Dispose() }
   Text $g "-0.5" 925 363 16 "b8c5df" ([Drawing.FontStyle]::Bold)
   Text $g "+0.5" 1120 363 16 "b8c5df" ([Drawing.FontStyle]::Bold)
   Text $g "1.0x" 1007 351 32 "f4f7fb" ([Drawing.FontStyle]::Bold)
+  Text $g "TARGET 2x" 925 417 11 "b9cbff" ([Drawing.FontStyle]::Bold)
+  Text $g "G" 1146 417 11 "b9cbff" ([Drawing.FontStyle]::Bold)
 
   Text $g "FRAME MODES" 895 468 15 "c7cfdb" ([Drawing.FontStyle]::Bold)
   $modeBrush = [Drawing.SolidBrush]::new((Color "182238"))
@@ -156,7 +159,7 @@ try {
   Text $g "V" 1150 522 20 "b9cbff" ([Drawing.FontStyle]::Bold)
   Text $g "21:9 CROP" 914 604 17 "e9effb" ([Drawing.FontStyle]::Bold)
   Text $g "Video only, no page resize" 914 632 12 "9eaac0"
-  Text $g "U" 1150 612 20 "b9cbff" ([Drawing.FontStyle]::Bold)
+  Text $g "B" 1150 612 20 "b9cbff" ([Drawing.FontStyle]::Bold)
 
   $bmp.Save((Join-Path $outputRoot "viewtune-screenshot-1280x800.png"), [Drawing.Imaging.ImageFormat]::Png)
 } finally { $panelBrush.Dispose(); $panel2.Dispose(); $videoBrush.Dispose(); $accentPen.Dispose(); $softPen.Dispose(); $g.Dispose(); $bmp.Dispose() }

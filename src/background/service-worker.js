@@ -1,5 +1,9 @@
 "use strict";
 
+importScripts("../shared/i18n.js");
+
+const { t } = globalThis.ViewTune;
+
 const activeFrames = new Map();
 const ACTIVE_FRAME_STORAGE_PREFIX = "viewtune-active-frame:";
 
@@ -94,6 +98,10 @@ function noReceiverResult() {
     rate: null,
     modes: { wide: false, window: false },
     pendingModes: { wide: false, window: false },
-    message: "이 탭에서 ViewTune이 제어할 비디오를 찾지 못했습니다."
+    message: t(
+      "backgroundNoVideo",
+      undefined,
+      "이 탭에서 ViewTune이 제어할 비디오를 찾지 못했습니다."
+    )
   };
 }

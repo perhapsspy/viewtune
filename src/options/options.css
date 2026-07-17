@@ -66,6 +66,7 @@ h2 {
 
 .section-heading,
 .feedback-card,
+.target-rate-card,
 .shortcut-row {
   display: flex;
   align-items: center;
@@ -74,7 +75,8 @@ h2 {
 }
 
 .section-heading > div > p,
-.feedback-card p {
+.feedback-card p,
+.target-rate-card p {
   margin-bottom: 0;
   font-size: 12px;
 }
@@ -162,6 +164,39 @@ h2 {
 
 .feedback-card {
   align-items: center;
+}
+
+.target-rate-card {
+  align-items: center;
+}
+
+.rate-field {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  color: var(--vt-color-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.rate-field input {
+  width: 76px;
+  min-height: 38px;
+  box-sizing: border-box;
+  border: 1px solid var(--vt-color-border-strong);
+  border-radius: var(--vt-radius-sm);
+  background: var(--vt-color-surface-raised);
+  color: var(--vt-color-text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.rate-field input:focus-visible {
+  border-color: var(--vt-color-accent);
+  outline: 2px solid rgba(134, 170, 255, 0.2);
+  outline-offset: 2px;
 }
 
 .switch {

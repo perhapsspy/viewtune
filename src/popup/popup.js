@@ -6,15 +6,18 @@
     BUILD_ID,
     STORAGE_KEY,
     defaultSettings,
+    localizeDocument,
     mergeSettings,
     runtimeIdentity,
     runtimeIdentitiesEqual,
-    shortcutLabel
+    shortcutLabel,
+    t
   } = globalThis.ViewTune;
+  localizeDocument();
   const currentRuntime = runtimeIdentity(chrome.runtime);
   const STEP_ACTION_LABELS = Object.freeze({
-    [ACTIONS.SPEED_DOWN]: "재생 속도 0.5배 낮추기",
-    [ACTIONS.SPEED_UP]: "재생 속도 0.5배 높이기"
+    [ACTIONS.SPEED_DOWN]: t("popupSpeedDownAria", undefined, "재생 속도 0.5배 낮추기"),
+    [ACTIONS.SPEED_UP]: t("popupSpeedUpAria", undefined, "재생 속도 0.5배 높이기")
   });
   const PENDING_REFRESH_MS = 80;
   const ACTIVE_WINDOW_REFRESH_MS = 500;
@@ -35,6 +38,7 @@
     reloadTab: document.querySelector("#reload-tab"),
     runtime: document.querySelector("#runtime"),
     status: document.querySelector("#status"),
+    targetRateLabel: document.querySelector("#target-rate-label"),
     actionButtons: [...document.querySelectorAll("[data-action]")],
     layoutButtons: [...document.querySelectorAll("[data-mode]")],
     shortcutTargets: [...document.querySelectorAll("[data-shortcut-for]")]
@@ -80,7 +84,7 @@
       }
       state.tabId = tab?.id ?? null;
       if (!Number.isInteger(state.tabId)) {
-        renderDisconnected("현재 탭을 확인할 수 없어요.");
+        renderDisconnected(t("popupNoActiveTab", undefined, "현재 탭을 확인할 수 없어요."));
         return;
       }
 
@@ -95,7 +99,7 @@
       scheduleStatusRefresh(result, requestRevision);
     } catch {
       if (isCurrentRequest(requestRevision)) {
-        renderDisconnected("이 탭에서는 ViewTune을 사용할 수 없어요.");
+        renderDisconnected(t("popupUnavailable", undefined, "이 탭에서는 ViewTune을 사용할 수 없어요."));
       }
     }
   }
@@ -120,7 +124,11 @@
       scheduleStatusRefresh(result, requestRevision);
     } catch {
       if (isCurrentRequest(requestRevision)) {
-        renderDisconnected("명령을 전달하지 못했어요. 페이지를 새로고침해 보세요.");
+        renderDisconnected(t(
+          "popupCommandFailed",
+          undefined,
+          "명령을 전달하지 못했어요. 페이지를 새로고침해 보세요."
+        ));
       }
     } finally {
       if (isCurrentRequest(requestRevision)) {
@@ -148,13 +156,19 @@
     renderRuntime(result.runtime);
     elements.reloadTab.hidden = true;
     if (!result?.found) {
-      renderDisconnected(result?.message || "현재 탭에서 제어할 영상을 찾지 못했어요.");
+      renderDisconnected(result?.message || t(
+        "popupNoVideo",
+        undefined,
+        "현재 탭에서 제어할 영상을 찾지 못했어요."
+      ));
       return;
     }
 
     const actionFailed = result.ok === false && result.message;
     state.hasVideo = true;
-    elements.status.textContent = actionFailed ? result.message : "현재 영상에 연결됨";
+    elements.status.textContent = actionFailed
+      ? result.message
+      : t("popupConnected", undefined, "현재 영상에 연결됨");
     if (actionFailed) {
       delete elements.status.dataset.connected;
     } else {
@@ -197,14 +211,36 @@
       const button = elements.actionButtons.find((candidate) => candidate.dataset.action === action);
       button?.setAttribute(
         "aria-label",
-        `${label}, 단축키 ${shortcutLabel(state.settings.shortcuts[action])}`
+        t(
+          "popupActionShortcutAria",
+          [label, shortcutLabel(state.settings.shortcuts[action])],
+          `${label}, 단축키 ${shortcutLabel(state.settings.shortcuts[action])}`
+        )
       );
     }
+    const targetRate = formatRate(state.settings.targetPlaybackRate);
+    elements.targetRateLabel.textContent = t(
+      "popupApplyTargetRate",
+      [targetRate],
+      `${targetRate}× 바로 적용`
+    );
+    const targetButton = elements.actionButtons.find(
+      (candidate) => candidate.dataset.action === ACTIONS.SPEED_TARGET
+    );
+    targetButton?.setAttribute("aria-label", t(
+      "popupApplyTargetRateAria",
+      [targetRate, shortcutLabel(state.settings.shortcuts[ACTIONS.SPEED_TARGET])],
+      `목표 속도 ${targetRate}배 적용, 단축키 ${shortcutLabel(state.settings.shortcuts[ACTIONS.SPEED_TARGET])}`
+    ));
   }
 
   function renderStaleRuntime(pageRuntime) {
     state.hasVideo = false;
-    elements.status.textContent = "업데이트 적용 필요 — 이 탭은 이전 ViewTune 코드입니다.";
+    elements.status.textContent = t(
+      "popupUpdateRequired",
+      undefined,
+      "업데이트 적용 필요 — 이 탭은 이전 ViewTune 코드입니다."
+    );
     delete elements.status.dataset.connected;
     elements.rate.textContent = "—";
     elements.reloadTab.hidden = false;
@@ -218,7 +254,11 @@
   }
 
   function renderRuntime(pageRuntime) {
-    const expected = `확장 v${currentRuntime.manifestVersion} · ${BUILD_ID}`;
+    const expected = t(
+      "popupRuntimeExpected",
+      [currentRuntime.manifestVersion || "?", BUILD_ID],
+      `확장 v${currentRuntime.manifestVersion} · ${BUILD_ID}`
+    );
     elements.runtime.hidden = true;
     elements.runtime.textContent = "";
     elements.runtime.title = expected;
@@ -226,13 +266,19 @@
       return;
     }
 
-    const pageVersion = pageRuntime.manifestVersion ? `v${pageRuntime.manifestVersion}` : "버전 정보 없음";
-    const pageBuild = pageRuntime.buildId || "빌드 정보 없음";
+    const pageVersion = pageRuntime.manifestVersion
+      ? `v${pageRuntime.manifestVersion}`
+      : t("popupNoVersion", undefined, "버전 정보 없음");
+    const pageBuild = pageRuntime.buildId || t("popupNoBuild", undefined, "빌드 정보 없음");
     const differentExtension = pageRuntime.extensionId
       && pageRuntime.extensionId !== currentRuntime.extensionId
-      ? " · 다른 확장 ID"
+      ? t("popupDifferentExtension", undefined, " · 다른 확장 ID")
       : "";
-    elements.runtime.textContent = `${expected} · 페이지 ${pageVersion} · ${pageBuild}${differentExtension}`;
+    elements.runtime.textContent = t(
+      "popupRuntimeMismatch",
+      [expected, pageVersion, pageBuild, differentExtension],
+      `${expected} · 페이지 ${pageVersion} · ${pageBuild}${differentExtension}`
+    );
     elements.runtime.title = elements.runtime.textContent;
     elements.runtime.hidden = false;
   }
@@ -291,7 +337,7 @@
       window.close();
     } catch {
       elements.reloadTab.disabled = false;
-      elements.status.textContent = "탭을 새로고침하지 못했어요.";
+      elements.status.textContent = t("popupReloadFailed", undefined, "탭을 새로고침하지 못했어요.");
     }
   }
 

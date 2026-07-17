@@ -3,8 +3,11 @@
 
   const {
     ACTIONS,
+    DEFAULT_TARGET_PLAYBACK_RATE,
     MAX_PLAYBACK_RATE,
-    MIN_PLAYBACK_RATE
+    MIN_PLAYBACK_RATE,
+    normalizeTargetPlaybackRate,
+    t
   } = globalThis.ViewTune;
 
   const PLAYER_SURFACE_HINT_SELECTOR = [
@@ -28,6 +31,7 @@
   const WIDE_CROP_MIN_SCALE = 1.02;
   const MAX_PLAYER_ANCESTORS = 8;
   const MAX_CONTROL_WITNESSES = 32;
+  const MAX_OVERLAY_WITNESSES = 8;
   const CONTROL_SELECTOR = [
     "button",
     "[role='button']",
@@ -131,12 +135,22 @@
       this.activeWideCrop = null;
       this.stateObserver = null;
       this.windowLayoutValidationToken = null;
+      this.targetPlaybackRate = DEFAULT_TARGET_PLAYBACK_RATE;
+      this.pendingRateResumes = new WeakMap();
 
       this.trackVideoInteractions();
     }
 
     setFeedbackEnabled(enabled) {
       this.showFeedback = Boolean(enabled);
+    }
+
+    setTargetPlaybackRate(rate) {
+      this.targetPlaybackRate = normalizeTargetPlaybackRate(rate);
+    }
+
+    hasActiveWindowLayout() {
+      return Boolean(this.activeWindowLayout);
     }
 
     hasControllableVideo() {
@@ -170,12 +184,15 @@
       if (action === ACTIONS.SPEED_UP) {
         return this.changePlaybackRate(0.5);
       }
+      if (action === ACTIONS.SPEED_TARGET) {
+        return this.setPlaybackRate(this.targetPlaybackRate);
+      }
       if (action === ACTIONS.SPEED_RESET) {
-        return this.resetPlaybackRate();
+        return this.setPlaybackRate(1);
       }
 
       const video = this.activeConnectedVideo() || this.findVideo();
-      const message = "알 수 없는 ViewTune 동작입니다.";
+      const message = t("contentUnknownAction", undefined, "알 수 없는 ViewTune 동작입니다.");
       return video
         ? this.resultFor(video, { ok: false, message })
         : { ...this.noVideoResult(), message };
@@ -317,32 +334,102 @@
         return this.noVideoResult();
       }
 
-      const nextRate = this.clampRate(video.playbackRate + delta);
-      video.playbackRate = nextRate;
+      const requestedRate = this.clampRate(video.playbackRate + delta);
+      const nextRate = this.rateSupportedByPage(requestedRate);
+      this.applyPlaybackRate(video, nextRate);
       this.rememberInteraction(video);
+      const formattedRate = this.formatRate(nextRate);
+      const siteLimited = nextRate !== requestedRate;
       const isAtLimit = nextRate === MIN_PLAYBACK_RATE || nextRate === MAX_PLAYBACK_RATE;
-      this.showToast(isAtLimit ? `속도 ${this.formatRate(nextRate)}× (한계)` : `속도 ${this.formatRate(nextRate)}×`);
+      this.showToast(siteLimited
+        ? t("contentSpeedSiteLimit", [formattedRate], `속도 ${formattedRate}× (사이트 한계)`)
+        : isAtLimit
+          ? t("contentSpeedLimit", [formattedRate], `속도 ${formattedRate}× (한계)`)
+          : t("contentSpeed", [formattedRate], `속도 ${formattedRate}×`));
       return this.resultFor(video, { ok: true });
     }
 
-    resetPlaybackRate() {
+    setPlaybackRate(rate) {
       const video = this.findVideo();
       if (!video) {
         return this.noVideoResult();
       }
 
-      video.playbackRate = 1;
+      const requestedRate = this.clampRate(rate);
+      const nextRate = this.rateSupportedByPage(requestedRate);
+      this.applyPlaybackRate(video, nextRate);
       this.rememberInteraction(video);
-      this.showToast("속도 1×");
+      const formattedRate = this.formatRate(nextRate);
+      this.showToast(nextRate === requestedRate
+        ? t("contentSpeed", [formattedRate], `속도 ${formattedRate}×`)
+        : t("contentSpeedSiteLimit", [formattedRate], `속도 ${formattedRate}× (사이트 한계)`));
       return this.resultFor(video, { ok: true });
+    }
+
+    applyPlaybackRate(video, rate) {
+      if (video.playbackRate === rate) {
+        return;
+      }
+
+      const previousResume = this.pendingRateResumes.get(video);
+      const shouldResume = this.requiresPausedRateChange()
+        && (previousResume?.shouldResume || (!video.paused && !video.ended));
+      if (shouldResume && typeof video.pause === "function") {
+        video.pause();
+      }
+      video.playbackRate = rate;
+      if (!shouldResume || typeof video.play !== "function") {
+        this.pendingRateResumes.delete(video);
+        return;
+      }
+
+      const resumeToken = { shouldResume: true };
+      this.pendingRateResumes.set(video, resumeToken);
+      const resume = () => {
+        if (this.pendingRateResumes.get(video) !== resumeToken) {
+          return;
+        }
+        if (!video.isConnected || video.ended) {
+          this.pendingRateResumes.delete(video);
+          return;
+        }
+        this.pendingRateResumes.delete(video);
+        try {
+          const playResult = video.play();
+          playResult?.catch?.(() => {});
+        } catch {
+          // 사이트가 재생 재개를 거절하면 사용자의 다음 재생 입력에 맡긴다.
+        }
+      };
+      if (typeof this.window.requestAnimationFrame === "function") {
+        this.window.requestAnimationFrame(resume);
+      } else if (typeof this.window.setTimeout === "function") {
+        this.window.setTimeout?.(resume, 0);
+      } else {
+        resume();
+      }
+    }
+
+    rateSupportedByPage(rate) {
+      return this.isNetflixPage() ? Math.min(1.5, rate) : rate;
+    }
+
+    requiresPausedRateChange() {
+      return this.isNetflixPage();
+    }
+
+    isNetflixPage() {
+      try {
+        const hostname = String(this.document.location?.hostname || "").toLowerCase();
+        return hostname === "netflix.com" || hostname.endsWith(".netflix.com");
+      } catch {
+        return false;
+      }
     }
 
     toggleWindowLayout() {
       if (this.activeWindowLayout) {
-        const video = this.activeWindowLayout.video;
-        this.resetWindowLayout();
-        this.showToast("창 맞춤 해제");
-        return this.resultFor(video, { ok: true });
+        return this.dismissWindowLayout();
       }
 
       const video = this.findVideo();
@@ -350,7 +437,11 @@
         return this.noVideoResult();
       }
       if (!this.isTopLevelFrame()) {
-        const message = "iframe 영상은 탭 전체 창 맞춤을 안전하게 적용할 수 없어요.";
+        const message = t(
+          "contentEmbeddedFrameUnsupported",
+          undefined,
+          "iframe 영상은 탭 전체 창 맞춤을 안전하게 적용할 수 없어요."
+        );
         this.showToast(message);
         return this.resultFor(video, { ok: false, message, reason: "embedded-frame" });
       }
@@ -358,7 +449,11 @@
       const surface = this.playerSurfaceFor(video);
       const layout = this.activateWindowLayout({ surface, video });
       if (!layout) {
-        const message = "이 플레이어 구조에서는 화면 맞춤을 안전하게 적용할 수 없어요.";
+        const message = t(
+          "contentWindowUnsupported",
+          undefined,
+          "이 플레이어 구조에서는 화면 맞춤을 안전하게 적용할 수 없어요."
+        );
         this.showToast(message);
         return this.resultFor(video, { ok: false, message });
       }
@@ -369,7 +464,11 @@
       if (!initialGeometry.usable) {
         this.deactivateWindowLayout(layout);
         this.syncActiveWideCrop();
-        const message = "영상 크기가 깨져 원래 화면으로 복원했어요.";
+        const message = t(
+          "contentWindowRestoredBroken",
+          undefined,
+          "영상 크기가 깨져 원래 화면으로 복원했어요."
+        );
         this.showToast(message);
         return this.resultFor(video, { ok: false, message });
       }
@@ -378,7 +477,18 @@
       this.observeWindowLayout(layout);
       this.refreshStateObserver();
       this.scheduleWindowLayoutValidation(layout);
-      this.showToast("창 맞춤");
+      this.showToast(t("contentWindowEnabled", undefined, "창 맞춤"));
+      return this.resultFor(video, { ok: true });
+    }
+
+    dismissWindowLayout() {
+      if (!this.activeWindowLayout) {
+        return { ...this.noVideoResult(), reason: "window-layout-inactive" };
+      }
+
+      const video = this.activeWindowLayout.video;
+      this.resetWindowLayout();
+      this.showToast(t("contentWindowDisabled", undefined, "창 맞춤 해제"));
       return this.resultFor(video, { ok: true });
     }
 
@@ -386,7 +496,7 @@
       if (this.activeWideCrop) {
         const video = this.activeWideCrop.video;
         this.resetWideCrop();
-        this.showToast("21:9 확대 해제");
+        this.showToast(t("contentWideDisabled", undefined, "21:9 확대 해제"));
         return this.resultFor(video, { ok: true });
       }
 
@@ -395,13 +505,13 @@
         return this.noVideoResult();
       }
 
-      const surface = this.playerSurfaceFor(video);
+      const surface = this.playerSurfaceFor(video) || video;
       const originalSurfaceRect = this.normalizedRect(surface);
       const demand = this.wideCropDemand(video, originalSurfaceRect);
       if (!demand.needed) {
         const message = demand.reason === "metadata-unavailable"
-          ? "영상 비율을 확인할 수 없어 확대하지 않았어요."
-          : "현재 화면 비율에서는 확대할 여백이 없어요.";
+          ? t("contentWideMetadataUnavailable", undefined, "영상 비율을 확인할 수 없어 확대하지 않았어요.")
+          : t("contentWideAlreadyFit", undefined, "현재 화면 비율에서는 확대할 여백이 없어요.");
         this.showToast(message);
         return this.resultFor(video, {
           ok: true,
@@ -414,7 +524,11 @@
         ? this.activateWideCrop({ surface, video, sourceAspect: demand.sourceAspect })
         : null;
       if (!crop) {
-        const message = "이 플레이어에서는 영상 확대를 안전하게 적용할 수 없어요.";
+        const message = t(
+          "contentWideUnsupported",
+          undefined,
+          "이 플레이어에서는 영상 확대를 안전하게 적용할 수 없어요."
+        );
         this.showToast(message);
         return this.resultFor(video, { ok: false, message });
       }
@@ -422,7 +536,11 @@
       const geometry = this.wideCropGeometryStatus(crop, originalSurfaceRect);
       if (!geometry.usable) {
         this.deactivateWideCrop(crop);
-        const message = "플레이어 크기가 바뀌어 영상 확대를 취소했어요.";
+        const message = t(
+          "contentWideCanceledGeometry",
+          undefined,
+          "플레이어 크기가 바뀌어 영상 확대를 취소했어요."
+        );
         this.showToast(message);
         return this.resultFor(video, { ok: false, message });
       }
@@ -430,7 +548,7 @@
       this.activeWideCrop = crop;
       this.observeWideCrop(crop);
       this.refreshStateObserver();
-      this.showToast("21:9 확대 · 일부 잘림 가능");
+      this.showToast(t("contentWideEnabled", undefined, "21:9 확대 · 일부 잘림 가능"));
       return this.resultFor(video, { ok: true });
     }
 
@@ -566,7 +684,8 @@
       }
 
       const controlWitnesses = surface === video ? [] : this.captureControlWitnesses(surface);
-      if (surface !== video && controlWitnesses.length === 0) {
+      const overlayWitnesses = surface === video ? [] : this.captureOverlayWitnesses(surface, video);
+      if (surface !== video && controlWitnesses.length === 0 && overlayWitnesses.length === 0) {
         return null;
       }
       const controlBaseline = surface === video
@@ -583,6 +702,7 @@
         strategy: "popover",
         controlBaseline,
         controlWitnesses,
+        overlayWitnesses,
         fillElements,
         frameElement: surface,
         layoutElement,
@@ -721,7 +841,10 @@
       );
       return smallerArea > 0
         && this.overlapArea(surfaceRect, videoRect) / smallerArea >= 0.8
-        && this.captureControlWitnesses(surface).length > 0;
+        && (
+          this.captureControlWitnesses(surface).length > 0
+          || this.captureOverlayWitnesses(surface, video).length > 0
+        );
     }
 
     discoverPlayerSurface(video) {
@@ -779,6 +902,46 @@
       return Array.from(selected).slice(0, MAX_CONTROL_WITNESSES);
     }
 
+    captureOverlayWitnesses(surface, video) {
+      if (!surface?.children || surface === video || !surface.contains?.(video)) {
+        return [];
+      }
+
+      const surfaceRect = this.normalizedRect(surface);
+      const videoRect = this.normalizedRect(video);
+      if (!surfaceRect || !videoRect || !this.rectsRepresentSameFrame(surfaceRect, videoRect)) {
+        return [];
+      }
+      const surfaceArea = surfaceRect.width * surfaceRect.height;
+      const videoArea = videoRect.width * videoRect.height;
+      if (surfaceArea <= 0 || videoArea <= 0) {
+        return [];
+      }
+
+      const videoBranch = Array.from(surface.children).find(
+        (child) => child === video || child.contains?.(video)
+      );
+      const witnesses = [];
+      for (const element of Array.from(surface.children)) {
+        if (element === videoBranch) {
+          continue;
+        }
+        const rect = this.normalizedRect(element);
+        if (!rect || rect.width < 64 || rect.height < 48) {
+          continue;
+        }
+        if (!this.rectsRepresentSameFrame(surfaceRect, rect)
+          || !this.rectsRepresentSameFrame(videoRect, rect)) {
+          continue;
+        }
+        witnesses.push({ element, rect });
+        if (witnesses.length >= MAX_OVERLAY_WITNESSES) {
+          break;
+        }
+      }
+      return witnesses;
+    }
+
     applyWindowLayout(layout) {
       const host = layout.layoutElement;
       layout.environmentSnapshot = this.windowLayoutEnvironmentSnapshot();
@@ -808,9 +971,14 @@
         layout.handlePopoverToggle = (event) => {
           if (event?.newState === "closed"
             && !layout.deactivating
-            && this.activeWindowLayout === layout) {
+            && this.activeWindowLayout === layout
+            && !this.isLayoutPopoverOpen(layout)) {
             this.resetWindowLayout();
-            this.showToast("화면 레이어가 닫혀 원래 화면으로 복원했어요.");
+            this.showToast(t(
+              "contentWindowLayerClosed",
+              undefined,
+              "화면 레이어가 닫혀 원래 화면으로 복원했어요."
+            ));
           }
         };
         host.addEventListener?.("toggle", layout.handlePopoverToggle);
@@ -903,20 +1071,25 @@
         return { usable: true, reason: "ok", controlCount: 0 };
       }
 
+      const overlayStatus = this.overlayGeometryStatus(layout, frameRect);
+      const fallbackToOverlay = (reason, controlCount = 0) => overlayStatus.usable
+        ? { ...overlayStatus, controlCount, evidence: "overlay" }
+        : { usable: false, reason, controlCount };
+
       const witnesses = layout.controlWitnesses || [];
       if (witnesses.length === 0 || typeof layout.surface.contains !== "function") {
-        return { usable: false, reason: "controls-unavailable", controlCount: 0 };
+        return fallbackToOverlay("controls-unavailable");
       }
 
       let controlCount = 0;
       for (const witness of witnesses) {
         const element = witness.element;
         if (!element?.isConnected || !layout.surface.contains(element)) {
-          return { usable: false, reason: "control-disconnected", controlCount };
+          return fallbackToOverlay("control-disconnected", controlCount);
         }
         const rect = this.normalizedRect(element);
         if (!rect || rect.width < 2 || rect.height < 2) {
-          return { usable: false, reason: "control-collapsed", controlCount };
+          return fallbackToOverlay("control-collapsed", controlCount);
         }
         const controlArea = rect.width * rect.height;
         if (this.overlapArea(frameRect, rect) / controlArea < 0.8) {
@@ -929,7 +1102,38 @@
         && !this.controlEnvelopeMatches(layout.controlBaseline, currentEnvelope)) {
         return { usable: false, reason: "control-layout-mismatch", controlCount };
       }
-      return { usable: true, reason: "ok", controlCount };
+      return { usable: true, reason: "ok", controlCount, evidence: "controls" };
+    }
+
+    overlayGeometryStatus(layout, frameRect) {
+      const witnesses = layout.overlayWitnesses || [];
+      if (witnesses.length === 0 || typeof layout.surface?.contains !== "function") {
+        return { usable: false, reason: "overlay-unavailable", overlayCount: 0 };
+      }
+
+      const frameArea = frameRect.width * frameRect.height;
+      let lastReason = "overlay-unavailable";
+      let overlayCount = 0;
+      for (const witness of witnesses) {
+        const element = witness.element;
+        if (!element?.isConnected || !layout.surface.contains(element)) {
+          lastReason = "overlay-disconnected";
+          continue;
+        }
+        const rect = this.normalizedRect(element);
+        if (!rect || rect.width < 64 || rect.height < 48) {
+          lastReason = "overlay-collapsed";
+          continue;
+        }
+        if (frameArea <= 0 || !this.rectsRepresentSameFrame(frameRect, rect)) {
+          lastReason = "overlay-frame-mismatch";
+          continue;
+        }
+        overlayCount += 1;
+      }
+      return overlayCount > 0
+        ? { usable: true, reason: "ok", overlayCount }
+        : { usable: false, reason: lastReason, overlayCount: 0 };
     }
 
     controlEnvelope(witnesses, frameRect, useSnapshot = false) {
@@ -985,15 +1189,28 @@
       if (!frameRect) {
         return false;
       }
-      if (this.controlGeometryStatus(layout, frameRect).usable) {
+      const currentStatus = this.controlGeometryStatus(layout, frameRect);
+      if (currentStatus.usable && currentStatus.evidence !== "overlay") {
         return true;
       }
 
-      const replacements = this.captureControlWitnesses(layout.surface);
-      if (replacements.length === 0) {
-        return false;
+      if (currentStatus.usable) {
+        const remountedControls = this.captureControlWitnesses(layout.surface);
+        if (remountedControls.length === 0) {
+          return true;
+        }
+        layout.controlWitnesses = remountedControls;
+        return this.controlGeometryStatus(layout, frameRect).usable;
       }
-      layout.controlWitnesses = replacements;
+
+      const replacements = this.captureControlWitnesses(layout.surface);
+      if (replacements.length > 0) {
+        layout.controlWitnesses = replacements;
+      }
+      const overlayReplacements = this.captureOverlayWitnesses(layout.surface, layout.video);
+      if (overlayReplacements.length > 0) {
+        layout.overlayWitnesses = overlayReplacements;
+      }
       return this.controlGeometryStatus(layout, frameRect).usable;
     }
 
@@ -1097,7 +1314,11 @@
         this.recordLayoutDiagnostic("settled", layout, geometry, pathCurrent);
         if (!pathCurrent || !geometry.usable) {
           this.resetWindowLayout();
-          this.showToast("영상 크기가 안정되지 않아 원래 화면으로 복원했어요.");
+          this.showToast(t(
+            "contentWindowUnstable",
+            undefined,
+            "영상 크기가 안정되지 않아 원래 화면으로 복원했어요."
+          ));
           return;
         }
         this.markWindowLayoutReady(layout);
@@ -1111,7 +1332,11 @@
         }
         if (this.hasConflictingPresentationMode()) {
           this.resetWindowLayout();
-          this.showToast("다른 화면 모드가 시작되어 창 맞춤을 해제했어요.");
+          this.showToast(t(
+            "contentWindowConflictingMode",
+            undefined,
+            "다른 화면 모드가 시작되어 창 맞춤을 해제했어요."
+          ));
           return;
         }
 
@@ -1126,7 +1351,11 @@
           this.recordLayoutDiagnostic("observed", layout, geometry, pathCurrent);
           if (!pathCurrent || !geometry.usable) {
             this.resetWindowLayout();
-            this.showToast("플레이어 구조가 바뀌어 원래 화면으로 복원했어요.");
+            this.showToast(t(
+              "contentWindowStructureChanged",
+              undefined,
+              "플레이어 구조가 바뀌어 원래 화면으로 복원했어요."
+            ));
           }
         };
 
@@ -1225,10 +1454,10 @@
       }
 
       const layout = this.activeWindowLayout;
+      this.activeWindowLayout = null;
       this.windowLayoutValidationToken = null;
       this.stopObservingWindowLayout(layout);
       this.deactivateWindowLayout(layout);
-      this.activeWindowLayout = null;
       this.syncActiveWideCrop();
       this.refreshStateObserver();
       return true;
@@ -1324,8 +1553,10 @@
 
     clearWideCropRendering(crop) {
       crop.video?.removeAttribute?.(WIDE_CROP_ATTRIBUTE);
-      crop.video?.style?.removeProperty?.(CROP_WIDTH_PROPERTY);
-      crop.video?.style?.removeProperty?.(CROP_HEIGHT_PROPERTY);
+      if (crop.kind !== "self") {
+        crop.video?.style?.removeProperty?.(CROP_WIDTH_PROPERTY);
+        crop.video?.style?.removeProperty?.(CROP_HEIGHT_PROPERTY);
+      }
       crop.rendering = false;
     }
 
@@ -1429,7 +1660,11 @@
         rate: null,
         modes: this.currentModes(),
         pendingModes: this.currentPendingModes(),
-        message: "이 페이지에서 제어할 비디오를 찾지 못했습니다."
+        message: t(
+          "contentNoVideo",
+          undefined,
+          "이 페이지에서 제어할 비디오를 찾지 못했습니다."
+        )
       };
     }
 

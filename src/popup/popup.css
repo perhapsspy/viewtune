@@ -181,6 +181,39 @@ body {
   color: var(--vt-color-text);
 }
 
+.target-button {
+  display: flex;
+  width: 100%;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+  border: 1px solid rgba(134, 170, 255, 0.2);
+  border-radius: var(--vt-radius-sm);
+  background: var(--vt-color-accent-soft);
+  color: var(--vt-color-accent-strong);
+  font-size: 11px;
+  font-weight: 700;
+  transition: background var(--vt-transition), border-color var(--vt-transition), transform var(--vt-transition);
+}
+
+.target-button:hover:not(:disabled) {
+  border-color: rgba(134, 170, 255, 0.42);
+  background: rgba(134, 170, 255, 0.18);
+}
+
+.target-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.target-button kbd {
+  min-width: 20px;
+  min-height: 18px;
+  padding: 1px 4px;
+  font-size: 9px;
+}
+
 .reset-button kbd {
   min-width: 18px;
   min-height: 18px;

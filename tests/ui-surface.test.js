@@ -19,14 +19,19 @@ const optionsHtml = read("src/options/options.html");
 const optionsJs = read("src/options/options.js");
 const themeCss = read("src/shared/theme.css");
 const constantsJs = read("src/shared/constants.js");
+const enMessages = JSON.parse(read("_locales/en/messages.json"));
+const koMessages = JSON.parse(read("_locales/ko/messages.json"));
 
 test("공개 UI와 런타임 식별자는 모두 ViewTune을 사용한다", () => {
-  assert.match(manifest.name, /^ViewTune\b/);
-  assert.equal(manifest.action.default_title, "ViewTune");
+  assert.equal(manifest.default_locale, "en");
+  assert.equal(manifest.name, "__MSG_extensionName__");
+  assert.equal(manifest.action.default_title, "__MSG_actionTitle__");
+  assert.match(enMessages.extensionName.message, /^ViewTune\b/);
+  assert.match(koMessages.extensionName.message, /^ViewTune\b/);
   assert.equal(manifest.icons[128], "assets/icons/icon-128.png");
   assert.equal(manifest.action.default_icon[16], "assets/icons/icon-16.png");
-  assert.match(popupHtml, /<title>ViewTune<\/title>/);
-  assert.match(optionsHtml, /<title>ViewTune 설정<\/title>/);
+  assert.match(popupHtml, /<title data-i18n="popupTitle">ViewTune<\/title>/);
+  assert.match(optionsHtml, /<title data-i18n="optionsTitle">ViewTune 설정<\/title>/);
   assert.match(constantsJs, /const STORAGE_KEY = "viewTuneSettings"/);
 
   assert.equal(packageJson.version, manifest.version);
@@ -53,6 +58,8 @@ test("popup은 속도 중심 계층과 접근 가능한 화면 모드 상태를 
   assert.match(popupJs, /setAttribute\("aria-pressed", String\(active\)\)/);
   assert.match(popupCss, /font-variant-numeric: tabular-nums/);
   assert.match(popupCss, /@media \(forced-colors: active\)/);
+  assert.match(popupHtml, /data-action="speedTarget"/);
+  assert.match(popupHtml, /data-shortcut-for="speedTarget">G</);
   assert.match(popupJs, /단축키 \$\{shortcutLabel\(state\.settings\.shortcuts\[action\]\)\}/);
 });
 
@@ -69,7 +76,7 @@ test("단축키 설정은 평상시 안내와 녹음 상태를 구분한다", ()
 });
 
 test("단축키 설정은 저장값 로드가 끝난 뒤에만 상호작용을 연다", () => {
-  assert.equal((optionsHtml.match(/ disabled/g) || []).length, 7);
+  assert.equal((optionsHtml.match(/ disabled/g) || []).length, 9);
   assert.match(optionsHtml, /<main aria-busy="true">/);
   assert.match(optionsJs, /await loadSettings\(\);\s*render\(\);\s*bindEvents\(\);\s*setInteractive\(true\);/);
 });

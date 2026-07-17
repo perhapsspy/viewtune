@@ -4,10 +4,13 @@
   const viewTune = globalThis.ViewTune;
   const {
     ACTION_ORDER,
+    DEFAULT_TARGET_PLAYBACK_RATE,
     DEFAULT_SHORTCUTS,
     LEGACY_DEFAULT_SHORTCUTS,
-
+    PUBLISHED_DEFAULT_SHORTCUTS,
     PREVIOUS_DEFAULT_SHORTCUTS,
+    SETTINGS_SCHEMA_VERSION,
+    SHORTCUT_PRESET_REVISION,
     STORAGE_KEY
   } = viewTune;
   const MODIFIER_CODES = new Set([
@@ -69,11 +72,18 @@
       shortcuts: Object.fromEntries(
         ACTION_ORDER.map((action) => [action, cloneShortcut(DEFAULT_SHORTCUTS[action])])
       ),
+      schemaVersion: SETTINGS_SCHEMA_VERSION,
+      shortcutPresetRevision: SHORTCUT_PRESET_REVISION,
+      targetPlaybackRate: DEFAULT_TARGET_PLAYBACK_RATE,
       showFeedback: true
     };
   }
 
   function mergeSettings(candidate) {
+    return upgradeSettings(candidate);
+  }
+
+  function upgradeSettings(candidate) {
     const defaults = defaultSettings();
     if (!candidate || typeof candidate !== "object") {
       return defaults;
@@ -84,22 +94,44 @@
       : {};
 
     if (usesPreviousDefaultPreset(shortcuts)) {
+      defaults.targetPlaybackRate = normalizeTargetPlaybackRate(candidate.targetPlaybackRate);
       defaults.showFeedback = typeof candidate.showFeedback === "boolean"
         ? candidate.showFeedback
         : defaults.showFeedback;
       return defaults;
     }
 
+    const isCurrentSchema = candidate.schemaVersion === SETTINGS_SCHEMA_VERSION;
+    defaults.shortcutPresetRevision = isCurrentSchema
+      && typeof candidate.shortcutPresetRevision === "string"
+      ? candidate.shortcutPresetRevision
+      : null;
+
     for (const action of ACTION_ORDER) {
+      if (!Object.prototype.hasOwnProperty.call(shortcuts, action)) {
+        continue;
+      }
       const shortcut = normalizeShortcut(shortcuts[action]);
       if (shortcut) {
         defaults.shortcuts[action] = shortcut;
+      } else if (isCurrentSchema && shortcuts[action] === null) {
+        defaults.shortcuts[action] = null;
       }
+    }
+
+    if (!isCurrentSchema
+      && !Object.prototype.hasOwnProperty.call(shortcuts, viewTune.ACTIONS.SPEED_TARGET)
+      && ACTION_ORDER.some((action) => (
+        action !== viewTune.ACTIONS.SPEED_TARGET
+        && shortcutsEqual(defaults.shortcuts[action], DEFAULT_SHORTCUTS[viewTune.ACTIONS.SPEED_TARGET])
+      ))) {
+      defaults.shortcuts[viewTune.ACTIONS.SPEED_TARGET] = null;
     }
 
     if (typeof candidate.showFeedback === "boolean") {
       defaults.showFeedback = candidate.showFeedback;
     }
+    defaults.targetPlaybackRate = normalizeTargetPlaybackRate(candidate.targetPlaybackRate);
 
     return defaults;
   }
@@ -109,19 +141,35 @@
       return false;
     }
 
-    return [LEGACY_DEFAULT_SHORTCUTS, PREVIOUS_DEFAULT_SHORTCUTS]
-      .some((preset) => ACTION_ORDER.every((action) => shortcutsEqual(
-        shortcuts[action],
-        preset[action]
-      )));
+    return [LEGACY_DEFAULT_SHORTCUTS, PREVIOUS_DEFAULT_SHORTCUTS, PUBLISHED_DEFAULT_SHORTCUTS]
+      .some((preset) => presetMatches(shortcuts, preset));
+  }
+
+  function presetMatches(shortcuts, preset) {
+    const presetActions = Object.keys(preset).sort();
+    const candidateActions = Object.keys(shortcuts).sort();
+    return candidateActions.length === presetActions.length
+      && candidateActions.every((action, index) => action === presetActions[index])
+      && presetActions.every((action) => shortcutsEqual(shortcuts[action], preset[action]));
+  }
+
+  function normalizeTargetPlaybackRate(value) {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      return DEFAULT_TARGET_PLAYBACK_RATE;
+    }
+    return Math.round(Math.max(0.5, Math.min(4, value)) * 100) / 100;
   }
 
   async function loadSettingsFromStorage(storageArea, { migrate = false } = {}) {
     const stored = await storageArea.get(STORAGE_KEY);
     const candidate = stored[STORAGE_KEY];
     const settings = mergeSettings(candidate);
-    if (migrate && usesPreviousDefaultPreset(candidate?.shortcuts)) {
-      await migrateStoredSettings(storageArea);
+    if (migrate && needsSettingsMigration(candidate)) {
+      try {
+        await migrateStoredSettings(storageArea);
+      } catch {
+        // 읽기에 성공한 사용자 설정은 동기화 저장이 일시 실패해도 계속 적용한다.
+      }
     }
     return settings;
   }
@@ -129,10 +177,17 @@
   async function migrateStoredSettings(storageArea) {
     const latest = await storageArea.get(STORAGE_KEY);
     const latestCandidate = latest[STORAGE_KEY];
-    if (latestCandidate !== undefined
-        && usesPreviousDefaultPreset(latestCandidate?.shortcuts)) {
-      await storageArea.set({ [STORAGE_KEY]: mergeSettings(latestCandidate) });
+    if (needsSettingsMigration(latestCandidate)) {
+      await storageArea.set({ [STORAGE_KEY]: upgradeSettings(latestCandidate) });
     }
+  }
+
+  function needsSettingsMigration(candidate) {
+    return Boolean(
+      candidate
+      && typeof candidate === "object"
+      && candidate.schemaVersion !== SETTINGS_SCHEMA_VERSION
+    );
   }
   function isModifierCode(code) {
     return MODIFIER_CODES.has(code);
@@ -193,7 +248,7 @@
   function shortcutLabel(shortcut) {
     const normalized = normalizeShortcut(shortcut);
     if (!normalized) {
-      return "미지정";
+      return viewTune.t?.("shortcutUnassigned", undefined, "미지정") || "미지정";
     }
 
     if (normalized.shift && normalized.code === "Comma" && !normalized.alt && !normalized.ctrl && !normalized.meta) {
@@ -241,10 +296,13 @@
     matchesShortcut,
     mergeSettings,
     migrateStoredSettings,
+    needsSettingsMigration,
     normalizeShortcut,
+    normalizeTargetPlaybackRate,
     shortcutFromEvent,
     shortcutLabel,
     shortcutsEqual,
+    upgradeSettings,
     usesPreviousDefaultPreset
   };
 

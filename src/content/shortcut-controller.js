@@ -56,6 +56,7 @@
     applySettings(settings) {
       this.settings = settings;
       this.videoController.setFeedbackEnabled(settings.showFeedback);
+      this.videoController.setTargetPlaybackRate?.(settings.targetPlaybackRate);
     }
 
     isTopFrame() {
@@ -67,7 +68,20 @@
     }
 
     handleKeydown(event) {
-      if (event.isComposing || this.isEditableEvent(event)) {
+      if (event.isComposing) {
+        return;
+      }
+
+      if (event.code === "Escape" && this.videoController.hasActiveWindowLayout?.()) {
+        const result = this.videoController.dismissWindowLayout();
+        this.consumeEvent(event);
+        if (result.ok) {
+          this.onFrameActivity();
+        }
+        return;
+      }
+
+      if (this.isEditableEvent(event)) {
         return;
       }
 

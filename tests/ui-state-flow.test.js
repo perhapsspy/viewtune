@@ -60,6 +60,7 @@ function createPopupHarness(messageHandler) {
   const reloadTab = new FakeElement();
   const runtimeText = new FakeElement();
   const status = new FakeElement();
+  const targetRateLabel = new FakeElement();
   const windowButton = new FakeElement({ dataset: { action: "window", mode: "window" } });
   const wideButton = new FakeElement({ dataset: { action: "wide", mode: "wide" } });
   const actionButtons = [windowButton, wideButton];
@@ -77,7 +78,8 @@ function createPopupHarness(messageHandler) {
         "#rate": rate,
         "#reload-tab": reloadTab,
         "#runtime": runtimeText,
-        "#status": status
+        "#status": status,
+        "#target-rate-label": targetRateLabel
       }[selector] || null;
     },
     querySelectorAll(selector) {
@@ -120,19 +122,22 @@ function createPopupHarness(messageHandler) {
       WINDOW: "window",
       SPEED_DOWN: "speedDown",
       SPEED_UP: "speedUp",
+      SPEED_TARGET: "speedTarget",
       SPEED_RESET: "speedReset"
     },
     BUILD_ID: runtime.buildId,
     STORAGE_KEY: "viewTuneSettings",
-    defaultSettings: () => ({ shortcuts: {} }),
-    mergeSettings: () => ({ shortcuts: {} }),
+    defaultSettings: () => ({ shortcuts: {}, targetPlaybackRate: 2 }),
+    localizeDocument() {},
+    mergeSettings: () => ({ shortcuts: {}, targetPlaybackRate: 2 }),
     runtimeIdentity: () => runtime,
     runtimeIdentitiesEqual: (left, right) => (
       left?.buildId === right?.buildId
       && left?.extensionId === right?.extensionId
       && left?.manifestVersion === right?.manifestVersion
     ),
-    shortcutLabel: () => ""
+    shortcutLabel: () => "",
+    t: (_key, _substitutions, fallback) => fallback
   };
 
   vm.runInNewContext(popupSource, context, { filename: "popup.js" });
@@ -222,7 +227,7 @@ test("options는 저장 설정을 읽기 전에는 입력을 연결하거나 저
   const feedback = new FakeElement({ disabled: true });
   const note = new FakeElement();
   const restoreDefaults = new FakeElement({ disabled: true });
-  const actions = ["wide", "window", "speedDown", "speedUp", "speedReset"];
+  const actions = ["wide", "window", "speedTarget", "speedDown", "speedUp", "speedReset"];
   const buttons = actions.map((action) => new FakeElement({
     dataset: { recordAction: action },
     disabled: true,
@@ -231,8 +236,11 @@ test("options는 저장 설정을 읽기 전에는 입력을 연결하거나 저
   const labels = Object.fromEntries(actions.map((action) => [action, action]));
   const customSettings = {
     showFeedback: false,
+    targetPlaybackRate: 2.5,
     shortcuts: Object.fromEntries(actions.map((action, index) => [action, { code: `Key${index}` }]))
   };
+  const targetRate = new FakeElement({ disabled: true });
+  targetRate.valueAsNumber = 2;
 
   const document = {
     addEventListener(type, listener) {
@@ -243,7 +251,8 @@ test("options는 저장 설정을 읽기 전에는 입력을 연결하거나 저
         main,
         "#show-feedback": feedback,
         "#recording-note": note,
-        "#restore-defaults": restoreDefaults
+        "#restore-defaults": restoreDefaults,
+        "#target-playback-rate": targetRate
       }[selector] || null;
     },
     querySelectorAll(selector) {
@@ -268,16 +277,19 @@ test("options는 저장 설정을 읽기 전에는 입력을 연결하거나 저
       ACTION_ORDER: actions,
 
       STORAGE_KEY: "viewTuneSettings",
-      defaultSettings: () => ({ showFeedback: true, shortcuts: {} }),
+      defaultSettings: () => ({ showFeedback: true, targetPlaybackRate: 2, shortcuts: {} }),
+      localizeDocument() {},
       loadSettingsFromStorage: async (storageArea) => {
         const stored = await storageArea.get();
-        return stored.viewTuneSettings || { showFeedback: true, shortcuts: {} };
+        return stored.viewTuneSettings || { showFeedback: true, targetPlaybackRate: 2, shortcuts: {} };
       },
-      mergeSettings: (candidate) => candidate || { showFeedback: true, shortcuts: {} },
+      mergeSettings: (candidate) => candidate || { showFeedback: true, targetPlaybackRate: 2, shortcuts: {} },
+      normalizeTargetPlaybackRate: (rate) => rate,
       shortcutFromEvent: () => null,
       shortcutLabel: (shortcut) => shortcut.code,
       shortcutsEqual: () => false,
-      usesPreviousDefaultPreset: () => false
+      usesPreviousDefaultPreset: () => false,
+      t: (_key, _substitutions, fallback) => fallback
     }
   };
 
@@ -297,7 +309,9 @@ test("options는 저장 설정을 읽기 전에는 입력을 연결하거나 저
   assert.equal(main.getAttribute("aria-busy"), "false");
   assert.equal(buttons.every((button) => !button.disabled), true);
   assert.equal(feedback.disabled, false);
+  assert.equal(targetRate.disabled, false);
   assert.equal(feedback.checked, false);
+  assert.equal(targetRate.value, "2.5");
   assert.equal(buttons[0].kbd.textContent, "Key0");
   assert.equal(saveCount, 0);
 });

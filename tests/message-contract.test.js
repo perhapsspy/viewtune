@@ -11,7 +11,7 @@ const workerSource = readFileSync(
   "utf8"
 );
 
-test("popup은 U와 V의 복수 상태만 독립적으로 표시한다", () => {
+test("popup은 B와 V의 복수 상태만 독립적으로 표시한다", () => {
   assert.match(popupSource, /renderModes\(result\.modes\)/);
   assert.match(popupSource, /const active = modes\[button\.dataset\.mode\] === true/);
   assert.match(popupSource, /setAttribute\("aria-pressed", String\(active\)\)/);
@@ -20,7 +20,7 @@ test("popup은 U와 V의 복수 상태만 독립적으로 표시한다", () => {
   assert.doesNotMatch(popupSource, /result\.mode\b/);
 });
 
-test("수신기 없음 응답도 U와 V의 비활성 복수 상태를 제공한다", () => {
+test("수신기 없음 응답도 B와 V의 비활성 복수 상태를 제공한다", () => {
   assert.match(workerSource, /modes:\s*\{\s*wide:\s*false,\s*window:\s*false\s*\}/);
   assert.match(workerSource, /pendingModes:\s*\{\s*wide:\s*false,\s*window:\s*false\s*\}/);
   assert.doesNotMatch(workerSource, /\bmode:\s*null/);

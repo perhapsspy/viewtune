@@ -6,23 +6,33 @@
     ACTION_ORDER,
     STORAGE_KEY,
     defaultSettings,
+    localizeDocument,
     loadSettingsFromStorage,
+    normalizeTargetPlaybackRate,
     shortcutFromEvent,
     shortcutLabel,
-    shortcutsEqual
+    shortcutsEqual,
+    t
   } = globalThis.ViewTune;
+
+  localizeDocument();
 
   let settings = defaultSettings();
   let recordingAction = null;
   let noteTimer = null;
-  const DEFAULT_NOTE = "키 버튼을 선택하면 새 단축키를 입력할 수 있습니다.";
+  const DEFAULT_NOTE = t(
+    "optionsDefaultNote",
+    undefined,
+    "키 버튼을 선택하면 새 단축키를 입력할 수 있습니다."
+  );
 
   const elements = {
     feedback: document.querySelector("#show-feedback"),
     main: document.querySelector("main"),
     note: document.querySelector("#recording-note"),
     restoreDefaults: document.querySelector("#restore-defaults"),
-    shortcutButtons: [...document.querySelectorAll("[data-record-action]")]
+    shortcutButtons: [...document.querySelectorAll("[data-record-action]")],
+    targetRate: document.querySelector("#target-playback-rate")
   };
 
   initialize();
@@ -45,6 +55,7 @@
     document.addEventListener("keydown", captureShortcut, true);
     elements.restoreDefaults.addEventListener("click", restoreDefaults);
     elements.feedback.addEventListener("change", updateFeedbackPreference);
+    elements.targetRate.addEventListener("change", updateTargetPlaybackRate);
   }
 
   async function loadSettings() {
@@ -52,7 +63,7 @@
       settings = await loadSettingsFromStorage(chrome.storage.sync, { migrate: true });
     } catch {
       settings = defaultSettings();
-      showNote("설정을 읽지 못해 기본값을 사용 중입니다.", "error");
+      showNote(t("optionsReadFailed", undefined, "설정을 읽지 못해 기본값을 사용 중입니다."), "error");
     }
   }
 
@@ -60,21 +71,27 @@
     for (const button of elements.shortcutButtons) {
       const action = button.dataset.recordAction;
       button.querySelector("kbd").textContent = recordingAction === action
-        ? "키를 누르세요…"
+        ? t("optionsPressAKey", undefined, "키를 누르세요…")
         : shortcutLabel(settings.shortcuts[action]);
       button.dataset.recording = String(recordingAction === action);
       button.setAttribute("aria-pressed", String(recordingAction === action));
       button.setAttribute(
         "aria-label",
-        `${ACTION_LABELS[action]} 단축키 변경, 현재 ${shortcutLabel(settings.shortcuts[action])}`
+        t(
+          "optionsChangeShortcutAria",
+          [ACTION_LABELS[action], shortcutLabel(settings.shortcuts[action])],
+          `${ACTION_LABELS[action]} 단축키 변경, 현재 ${shortcutLabel(settings.shortcuts[action])}`
+        )
       );
     }
     elements.feedback.checked = settings.showFeedback;
+    elements.targetRate.value = String(settings.targetPlaybackRate);
   }
 
   function setInteractive(enabled) {
     elements.main.setAttribute("aria-busy", String(!enabled));
     elements.feedback.disabled = !enabled;
+    elements.targetRate.disabled = !enabled;
     elements.restoreDefaults.disabled = !enabled;
     for (const button of elements.shortcutButtons) {
       button.disabled = !enabled;
@@ -85,9 +102,9 @@
     recordingAction = recordingAction === action ? null : action;
     render();
     if (recordingAction) {
-      showNote("원하는 키 또는 Shift + 키를 누르세요. Esc는 취소합니다.");
+      showNote(t("optionsRecordingPrompt", undefined, "원하는 키 또는 Shift + 키를 누르세요. Esc는 취소합니다."));
     } else {
-      showNote("변경을 취소했습니다.");
+      showNote(t("optionsChangeCanceled", undefined, "변경을 취소했습니다."));
     }
   }
 
@@ -102,39 +119,52 @@
     if (event.code === "Escape") {
       recordingAction = null;
       render();
-      showNote("변경을 취소했습니다.");
+      showNote(t("optionsChangeCanceled", undefined, "변경을 취소했습니다."));
       return;
     }
 
     const shortcut = shortcutFromEvent(event);
     if (!shortcut) {
-      showNote("수정 키만으로는 단축키를 만들 수 없어요.", "error");
+      showNote(t("optionsModifierOnly", undefined, "수정 키만으로는 단축키를 만들 수 없어요."), "error");
       return;
     }
     if (shortcut.ctrl || shortcut.alt || shortcut.meta) {
-      showNote("Ctrl, Alt, Meta 조합은 브라우저 단축키와 충돌할 수 있어 사용할 수 없어요.", "error");
+      showNote(t(
+        "optionsReservedModifiers",
+        undefined,
+        "Ctrl, Alt, Meta 조합은 브라우저 단축키와 충돌할 수 있어 사용할 수 없어요."
+      ), "error");
       return;
     }
 
     const conflictAction = conflictingAction(shortcut);
     if (conflictAction) {
-      showNote(`${ACTION_LABELS[conflictAction]}에 이미 같은 키가 지정되어 있어요.`, "error");
+      showNote(t(
+        "optionsShortcutConflict",
+        [ACTION_LABELS[conflictAction]],
+        `${ACTION_LABELS[conflictAction]}에 이미 같은 키가 지정되어 있어요.`
+      ), "error");
       return;
     }
 
     const action = recordingAction;
     const previous = settings.shortcuts[action];
     settings.shortcuts[action] = shortcut;
+    settings.shortcutPresetRevision = null;
     recordingAction = null;
     render();
 
     try {
       await saveSettings();
-      showNote(`${ACTION_LABELS[action]}: ${shortcutLabel(shortcut)}로 저장했습니다.`, "success");
+      showNote(t(
+        "optionsShortcutSaved",
+        [ACTION_LABELS[action], shortcutLabel(shortcut)],
+        `${ACTION_LABELS[action]}: ${shortcutLabel(shortcut)}로 저장했습니다.`
+      ), "success");
     } catch {
       settings.shortcuts[action] = previous;
       render();
-      showNote("저장하지 못했습니다. 다시 시도해 주세요.", "error");
+      showNote(t("optionsSaveFailed", undefined, "저장하지 못했습니다. 다시 시도해 주세요."), "error");
     }
   }
 
@@ -150,11 +180,15 @@
     render();
     try {
       await saveSettings();
-      showNote("기본 단축키와 피드백 설정을 복원했습니다.", "success");
+      showNote(t(
+        "optionsDefaultsSaved",
+        undefined,
+        "기본 단축키, 목표 속도와 피드백 설정을 복원했습니다."
+      ), "success");
     } catch {
       await loadSettings();
       render();
-      showNote("복원 설정을 저장하지 못했습니다.", "error");
+      showNote(t("optionsDefaultsFailed", undefined, "복원 설정을 저장하지 못했습니다."), "error");
     }
   }
 
@@ -163,11 +197,42 @@
     settings.showFeedback = elements.feedback.checked;
     try {
       await saveSettings();
-      showNote(settings.showFeedback ? "화면 피드백을 표시합니다." : "화면 피드백을 숨깁니다.", "success");
+      showNote(settings.showFeedback
+        ? t("optionsFeedbackEnabled", undefined, "화면 피드백을 표시합니다.")
+        : t("optionsFeedbackDisabled", undefined, "화면 피드백을 숨깁니다."), "success");
     } catch {
       settings.showFeedback = previous;
       render();
-      showNote("설정을 저장하지 못했습니다.", "error");
+      showNote(t("optionsPreferenceSaveFailed", undefined, "설정을 저장하지 못했습니다."), "error");
+    }
+  }
+
+  async function updateTargetPlaybackRate() {
+    const rawRate = elements.targetRate.valueAsNumber;
+    if (!Number.isFinite(rawRate) || rawRate < 0.5 || rawRate > 4) {
+      render();
+      showNote(t(
+        "optionsTargetRateInvalid",
+        undefined,
+        "목표 속도는 0.5×부터 4× 사이여야 합니다."
+      ), "error");
+      return;
+    }
+
+    const previous = settings.targetPlaybackRate;
+    settings.targetPlaybackRate = normalizeTargetPlaybackRate(rawRate);
+    render();
+    try {
+      await saveSettings();
+      showNote(t(
+        "optionsTargetRateSaved",
+        [String(settings.targetPlaybackRate)],
+        `목표 속도를 ${settings.targetPlaybackRate}×로 저장했습니다.`
+      ), "success");
+    } catch {
+      settings.targetPlaybackRate = previous;
+      render();
+      showNote(t("optionsPreferenceSaveFailed", undefined, "설정을 저장하지 못했습니다."), "error");
     }
   }
 

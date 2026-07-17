@@ -60,18 +60,18 @@ video[data-viewtune-window-video] {
   max-width: none !important;
 }
 
-/* U는 플레이어 박스를 바꾸지 않고 현재 영상 표시 박스만 21:9로 확대한다. */
+/* B는 플레이어 박스를 바꾸지 않고 현재 영상 표시 박스만 21:9로 확대한다. */
 video[data-viewtune-wide-crop] {
-  box-sizing: border-box !important;
-  left: 0 !important;
-  top: 0 !important;
-  max-width: none !important;
-  max-height: none !important;
   object-fit: cover !important;
   object-position: center !important;
 }
 
 video[data-viewtune-wide-crop="surface"] {
+  box-sizing: border-box !important;
+  left: 0 !important;
+  top: 0 !important;
   width: var(--viewtune-crop-width) !important;
   height: var(--viewtune-crop-height) !important;
+  max-width: none !important;
+  max-height: none !important;
 }
